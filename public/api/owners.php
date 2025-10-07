@@ -4,6 +4,12 @@
  * Owners API Endpoint
  */
 
+// Set JSON header immediately
+header('Content-Type: application/json; charset=utf-8');
+
+// Catch any output errors
+ob_start();
+
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/response.php';
 require_once __DIR__ . '/../../includes/csrf.php';
@@ -304,8 +310,13 @@ try {
     
 } catch (PDOException $e) {
     error_log("API owners " . $action . ": " . $e->getMessage());
+    ob_end_clean(); // Clear any output buffer
     json_error('Datenbankfehler aufgetreten', 500);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log("API owners " . $action . ": " . $e->getMessage());
+    ob_end_clean(); // Clear any output buffer
     json_error('Unerwarteter Fehler: ' . $e->getMessage(), 500);
 }
+
+// Ensure no further output
+exit;

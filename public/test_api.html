@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API JSON Test - Tierphysio Manager 2.0</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-grid {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .test-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        .test-name {
+            font-weight: 600;
+            min-width: 150px;
+        }
+        .test-url {
+            color: #666;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .test-status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 100px;
+        }
+        .status-pending {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .status-testing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .error-detail {
+            grid-column: 1 / -1;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #721c24;
+        }
+        .success-detail {
+            grid-column: 1 / -1;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #155724;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 1.1em;
+        }
+        .summary.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .summary.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API JSON Integrity Test</h1>
+        <p>Dieser Test überprüft, ob alle API-Endpunkte valides JSON zurückgeben.</p>
+        
+        <button id="startTest" onclick="runTests()">Tests starten</button>
+        
+        <div id="testResults" class="test-grid"></div>
+        
+        <div id="summary"></div>
+    </div>
+
+    <script>
+        const endpoints = [
+            { name: 'Patients API', url: '/api/patients.php?action=list' },
+            { name: 'Owners API', url: '/api/owners.php?action=list' },
+            { name: 'Appointments API', url: '/api/appointments.php?action=list' },
+            { name: 'Treatments API', url: '/api/treatments.php?action=list' },
+            { name: 'Invoices API', url: '/api/invoices.php?action=list' },
+            { name: 'Notes API', url: '/api/notes.php?action=list' },
+            { name: 'Integrity Check', url: '/api/integrity_json.php' }
+        ];
+
+        let testResults = [];
+
+        function createTestItem(endpoint) {
+            return `
+                <div class="test-item" id="test-${endpoint.name.replace(/\s+/g, '-')}">
+                    <div class="test-name">${endpoint.name}</div>
+                    <div class="test-url">${endpoint.url}</div>
+                    <div class="test-status status-pending">Ausstehend</div>
+                </div>
+            `;
+        }
+
+        function updateTestStatus(name, status, detail = null) {
+            const testId = `test-${name.replace(/\s+/g, '-')}`;
+            const testElement = document.getElementById(testId);
+            if (!testElement) return;
+
+            const statusElement = testElement.querySelector('.test-status');
+            statusElement.className = `test-status status-${status}`;
+            
+            const statusTexts = {
+                'pending': 'Ausstehend',
+                'testing': 'Teste...',
+                'success': '✅ Erfolgreich',
+                'error': '❌ Fehler'
+            };
+            statusElement.textContent = statusTexts[status] || status;
+
+            // Remove existing details
+            const existingDetail = testElement.querySelector('.error-detail, .success-detail');
+            if (existingDetail) {
+                existingDetail.remove();
+            }
+
+            // Add new detail if provided
+            if (detail) {
+                const detailDiv = document.createElement('div');
+                detailDiv.className = status === 'error' ? 'error-detail' : 'success-detail';
+                detailDiv.innerHTML = detail;
+                testElement.appendChild(detailDiv);
+            }
+        }
+
+        async function testEndpoint(endpoint) {
+            updateTestStatus(endpoint.name, 'testing');
+            
+            try {
+                const response = await fetch(endpoint.url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                const contentType = response.headers.get('content-type');
+                const text = await response.text();
+                
+                let result = {
+                    name: endpoint.name,
+                    url: endpoint.url,
+                    success: false,
+                    errors: []
+                };
+
+                // Check Content-Type header
+                if (!contentType || !contentType.includes('application/json')) {
+                    result.errors.push(`Wrong Content-Type: ${contentType || 'none'}`);
+                }
+
+                // Try to parse JSON
+                try {
+                    const json = JSON.parse(text);
+                    
+                    // Check for expected structure
+                    if (!json.hasOwnProperty('status')) {
+                        result.errors.push('Missing "status" field in JSON');
+                    }
+                    
+                    if (result.errors.length === 0) {
+                        result.success = true;
+                        result.data = json;
+                    }
+                } catch (e) {
+                    result.errors.push(`JSON Parse Error: ${e.message}`);
+                    
+                    // Show first 200 chars of response
+                    if (text.length > 0) {
+                        const preview = text.substring(0, 200);
+                        result.errors.push(`Response preview: <pre>${escapeHtml(preview)}...</pre>`);
+                    } else {
+                        result.errors.push('Empty response');
+                    }
+                }
+
+                testResults.push(result);
+
+                if (result.success) {
+                    let detail = `<strong>✅ JSON Valid</strong><br>`;
+                    detail += `Status: ${result.data.status}<br>`;
+                    if (result.data.message) {
+                        detail += `Message: ${result.data.message}<br>`;
+                    }
+                    if (result.data.data) {
+                        if (Array.isArray(result.data.data)) {
+                            detail += `Data: ${result.data.data.length} items`;
+                        } else if (typeof result.data.data === 'object') {
+                            detail += `Data: Object with ${Object.keys(result.data.data).length} keys`;
+                        }
+                    }
+                    updateTestStatus(endpoint.name, 'success', detail);
+                } else {
+                    updateTestStatus(endpoint.name, 'error', result.errors.join('<br>'));
+                }
+
+            } catch (error) {
+                testResults.push({
+                    name: endpoint.name,
+                    url: endpoint.url,
+                    success: false,
+                    errors: [`Network/Fetch Error: ${error.message}`]
+                });
+                updateTestStatus(endpoint.name, 'error', `Network Error: ${error.message}`);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function runTests() {
+            const button = document.getElementById('startTest');
+            button.disabled = true;
+            button.textContent = 'Tests laufen...';
+            
+            testResults = [];
+            
+            // Initialize test display
+            const resultsContainer = document.getElementById('testResults');
+            resultsContainer.innerHTML = endpoints.map(createTestItem).join('');
+            
+            // Run tests sequentially
+            for (const endpoint of endpoints) {
+                await testEndpoint(endpoint);
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Show summary
+            showSummary();
+            
+            button.disabled = false;
+            button.textContent = 'Tests erneut starten';
+        }
+
+        function showSummary() {
+            const successCount = testResults.filter(r => r.success).length;
+            const totalCount = testResults.length;
+            const allPassed = successCount === totalCount;
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.className = `summary ${allPassed ? 'success' : 'error'}`;
+            
+            let summaryHtml = `<h2>📊 Test-Zusammenfassung</h2>`;
+            summaryHtml += `<p><strong>${successCount} von ${totalCount} Tests erfolgreich</strong></p>`;
+            
+            if (allPassed) {
+                summaryHtml += `<p>🎉 Alle API-Endpunkte geben valides JSON zurück!</p>`;
+            } else {
+                summaryHtml += `<p>⚠️ Einige Endpunkte müssen korrigiert werden:</p>`;
+                summaryHtml += '<ul>';
+                testResults.filter(r => !r.success).forEach(r => {
+                    summaryHtml += `<li><strong>${r.name}</strong>: ${r.errors[0]}</li>`;
+                });
+                summaryHtml += '</ul>';
+            }
+            
+            summaryDiv.innerHTML = summaryHtml;
+        }
+
+        // Check if user is logged in first
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Try to fetch any API endpoint to check auth
+                const response = await fetch('/api/patients.php?action=list', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                
+                if (response.status === 401) {
+                    document.querySelector('.container').innerHTML += `
+                        <div class="error-detail" style="margin-top: 20px;">
+                            <strong>⚠️ Nicht eingeloggt</strong><br>
+                            Bitte erst <a href="/public/login.php">einloggen</a>, um die API-Tests durchzuführen.
+                        </div>
+                    `;
+                    document.getElementById('startTest').disabled = true;
+                }
+            } catch (e) {
+                console.log('Auth check failed:', e);
+            }
+        });
+    </script>
+</body>
+</html>

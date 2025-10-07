@@ -103,3 +103,29 @@ function logout_user() {
     // Destroy session
     session_destroy();
 }
+
+/**
+ * Check API authentication
+ * Returns JSON error if not authenticated
+ */
+function checkApiAuth() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user'])) {
+        // Check if response.php is loaded
+        if (function_exists('json_error')) {
+            json_error('Nicht authentifiziert. Bitte einloggen.', 401);
+        } else {
+            // Fallback to direct JSON output
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(401);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Nicht authentifiziert. Bitte einloggen.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+}
