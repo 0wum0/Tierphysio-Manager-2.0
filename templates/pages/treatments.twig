@@ -1,0 +1,252 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Behandlungen</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-hand-holding-medical me-1"></i>Behandlungen verwalten</span>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#treatmentModal">
+                <i class="fas fa-plus"></i> Neue Behandlung
+            </button>
+        </div>
+        <div class="card-body">
+            <!-- Filters -->
+            <form method="get" action="treatments.php" class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label for="patient_id" class="form-label">Patient</label>
+                    <select class="form-select" id="patient_id" name="patient_id">
+                        <option value="">Alle Patienten</option>
+                        {% for patient in patients %}
+                        <option value="{{ patient.id }}" {% if filters.patient_id == patient.id %}selected{% endif %}>
+                            {{ patient.name }} {% if patient.owner_last_name %}({{ patient.owner_last_name }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="therapist_id" class="form-label">Therapeut</label>
+                    <select class="form-select" id="therapist_id" name="therapist_id">
+                        <option value="">Alle Therapeuten</option>
+                        {% for therapist in therapists %}
+                        <option value="{{ therapist.id }}" {% if filters.therapist_id == therapist.id %}selected{% endif %}>
+                            {{ therapist.first_name }} {{ therapist.last_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label">Von Datum</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filters.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label">Bis Datum</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filters.date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filtern
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Treatments Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Patient</th>
+                            <th>Besitzer</th>
+                            <th>Therapeut</th>
+                            <th>Diagnose</th>
+                            <th>Dauer</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for treatment in treatments %}
+                        <tr>
+                            <td>{{ treatment.treatment_date|date('d.m.Y') }}</td>
+                            <td>
+                                <a href="patients.php?action=view&id={{ treatment.patient_id }}">
+                                    {{ treatment.patient_name }}
+                                </a>
+                                <small class="text-muted d-block">{{ treatment.patient_species }}</small>
+                            </td>
+                            <td>{{ treatment.owner_first_name }} {{ treatment.owner_last_name }}</td>
+                            <td>{{ treatment.therapist_first_name }} {{ treatment.therapist_last_name }}</td>
+                            <td>{{ treatment.diagnosis|slice(0, 50) }}{% if treatment.diagnosis|length > 50 %}...{% endif %}</td>
+                            <td>{{ treatment.duration_minutes }} Min.</td>
+                            <td>
+                                <a href="treatments.php?action=view&id={{ treatment.id }}" class="btn btn-sm btn-info" title="Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-warning" onclick="editTreatment({{ treatment.id }})" title="Bearbeiten">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Keine Behandlungen gefunden</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if pagination.total > 1 %}
+            <nav aria-label="Seitennavigation">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.current > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.current - 1 }}">Zurück</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in 1..pagination.total %}
+                    <li class="page-item {% if i == pagination.current %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if pagination.current < pagination.total %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.current + 1 }}">Weiter</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Treatment Modal -->
+<div class="modal fade" id="treatmentModal" tabindex="-1" aria-labelledby="treatmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="treatmentModalLabel">Neue Behandlung</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="treatmentForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="id" id="treatment_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="patient_id_form" class="form-label">Patient *</label>
+                            <select class="form-select" id="patient_id_form" name="patient_id" required>
+                                <option value="">Bitte wählen...</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="treatment_date" class="form-label">Behandlungsdatum *</label>
+                            <input type="date" class="form-control" id="treatment_date" name="treatment_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="diagnosis" class="form-label">Diagnose</label>
+                        <textarea class="form-control" id="diagnosis" name="diagnosis" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="symptoms" class="form-label">Symptome</label>
+                        <textarea class="form-control" id="symptoms" name="symptoms" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="treatment_methods" class="form-label">Behandlungsmethoden</label>
+                        <textarea class="form-control" id="treatment_methods" name="treatment_methods" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="pain_level_before" class="form-label">Schmerzlevel vorher (0-10)</label>
+                            <input type="number" class="form-control" id="pain_level_before" name="pain_level_before" min="0" max="10">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="pain_level_after" class="form-label">Schmerzlevel nachher (0-10)</label>
+                            <input type="number" class="form-control" id="pain_level_after" name="pain_level_after" min="0" max="10">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="progress_notes" class="form-label">Fortschrittsnotizen</label>
+                        <textarea class="form-control" id="progress_notes" name="progress_notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="saveTreatment()">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editTreatment(id) {
+    fetch('/public/api/treatments.php?action=get&id=' + id)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const treatment = data.data;
+                document.getElementById('treatment_id').value = treatment.id;
+                document.getElementById('patient_id_form').value = treatment.patient_id;
+                document.getElementById('treatment_date').value = treatment.treatment_date;
+                document.getElementById('diagnosis').value = treatment.diagnosis || '';
+                document.getElementById('symptoms').value = treatment.symptoms || '';
+                document.getElementById('treatment_methods').value = treatment.treatment_methods || '';
+                document.getElementById('pain_level_before').value = treatment.pain_level_before || '';
+                document.getElementById('pain_level_after').value = treatment.pain_level_after || '';
+                document.getElementById('progress_notes').value = treatment.progress_notes || '';
+                
+                document.getElementById('treatmentModalLabel').textContent = 'Behandlung bearbeiten';
+                new bootstrap.Modal(document.getElementById('treatmentModal')).show();
+            }
+        })
+        .catch(error => {
+            alert('Fehler beim Laden der Behandlung: ' + error);
+        });
+}
+
+function saveTreatment() {
+    const form = document.getElementById('treatmentForm');
+    const formData = new FormData(form);
+    const id = document.getElementById('treatment_id').value;
+    const action = id ? 'update' : 'create';
+    
+    formData.append('action', action);
+    formData.append('therapist_id', {{ user.id }});
+    
+    fetch('/public/api/treatments.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Fehler beim Speichern: ' + error);
+    });
+}
+</script>
+{% endblock %}

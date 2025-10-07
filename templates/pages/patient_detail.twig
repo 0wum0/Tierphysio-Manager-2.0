@@ -1,0 +1,502 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Patient: {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="mt-4">{{ patient.name }}</h1>
+        <div>
+            <a href="patients.php" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Zurück zur Liste
+            </a>
+            <button class="btn btn-warning" onclick="editPatient({{ patient.id }})">
+                <i class="fas fa-edit"></i> Bearbeiten
+            </button>
+        </div>
+    </div>
+    
+    <!-- Patient Info Card -->
+    <div class="row mt-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-paw"></i> Patientendaten
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Patienten-Nr:</strong> {{ patient.patient_number }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Tierart:</strong> {{ patient.species|capitalize }}
+                    </div>
+                    {% if patient.breed %}
+                    <div class="mb-2">
+                        <strong>Rasse:</strong> {{ patient.breed }}
+                    </div>
+                    {% endif %}
+                    {% if patient.color %}
+                    <div class="mb-2">
+                        <strong>Farbe:</strong> {{ patient.color }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <strong>Geschlecht:</strong> 
+                        {% if patient.gender == 'male' %}Männlich
+                        {% elseif patient.gender == 'female' %}Weiblich
+                        {% elseif patient.gender == 'neutered_male' %}Männlich (kastriert)
+                        {% elseif patient.gender == 'spayed_female' %}Weiblich (kastriert)
+                        {% else %}Unbekannt{% endif %}
+                    </div>
+                    {% if patient.birth_date %}
+                    <div class="mb-2">
+                        <strong>Geburtsdatum:</strong> {{ patient.birth_date|date('d.m.Y') }}
+                        <small class="text-muted">({{ "now"|date('Y') - patient.birth_date|date('Y') }} Jahre)</small>
+                    </div>
+                    {% endif %}
+                    {% if patient.weight %}
+                    <div class="mb-2">
+                        <strong>Gewicht:</strong> {{ patient.weight }} kg
+                    </div>
+                    {% endif %}
+                    {% if patient.microchip %}
+                    <div class="mb-2">
+                        <strong>Chip-Nr:</strong> {{ patient.microchip }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        <span class="badge bg-{{ patient.is_active ? 'success' : 'danger' }}">
+                            {{ patient.is_active ? 'Aktiv' : 'Inaktiv' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Owner Info Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-user"></i> Besitzer
+                </div>
+                <div class="card-body">
+                    <h5>{{ owner.first_name }} {{ owner.last_name }}</h5>
+                    {% if owner.company %}
+                    <div class="mb-2">
+                        <strong>Firma:</strong> {{ owner.company }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <strong>Kunden-Nr:</strong> {{ owner.customer_number }}
+                    </div>
+                    {% if owner.phone %}
+                    <div class="mb-2">
+                        <strong>Telefon:</strong> <a href="tel:{{ owner.phone }}">{{ owner.phone }}</a>
+                    </div>
+                    {% endif %}
+                    {% if owner.mobile %}
+                    <div class="mb-2">
+                        <strong>Mobil:</strong> <a href="tel:{{ owner.mobile }}">{{ owner.mobile }}</a>
+                    </div>
+                    {% endif %}
+                    {% if owner.email %}
+                    <div class="mb-2">
+                        <strong>E-Mail:</strong> <a href="mailto:{{ owner.email }}">{{ owner.email }}</a>
+                    </div>
+                    {% endif %}
+                    {% if owner.street %}
+                    <div class="mb-2">
+                        <strong>Adresse:</strong><br>
+                        {{ owner.street }} {{ owner.house_number }}<br>
+                        {{ owner.postal_code }} {{ owner.city }}
+                    </div>
+                    {% endif %}
+                    <a href="owners.php?action=view&id={{ owner.id }}" class="btn btn-sm btn-outline-info">
+                        Besitzer-Details anzeigen
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#overview">Übersicht</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#appointments">Termine</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#treatments">Behandlungen</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#notes">Notizen</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#documents">Dokumente</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#medical">Medizinisch</a>
+                </li>
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content mt-3">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Übersicht</h5>
+                            
+                            {% if patient.notes %}
+                            <div class="alert alert-info">
+                                <strong>Allgemeine Notizen:</strong><br>
+                                {{ patient.notes|nl2br }}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Letzte Termine</h6>
+                                    {% if appointments %}
+                                    <ul class="list-group">
+                                        {% for appointment in appointments|slice(0, 3) %}
+                                        <li class="list-group-item">
+                                            <div class="d-flex justify-content-between">
+                                                <span>{{ appointment.appointment_date|date('d.m.Y') }}</span>
+                                                <span class="badge bg-{{ appointment.status == 'completed' ? 'success' : 'warning' }}">
+                                                    {{ appointment.status }}
+                                                </span>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <p class="text-muted">Keine Termine vorhanden</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6>Letzte Behandlungen</h6>
+                                    {% if treatments %}
+                                    <ul class="list-group">
+                                        {% for treatment in treatments|slice(0, 3) %}
+                                        <li class="list-group-item">
+                                            <div>
+                                                <strong>{{ treatment.treatment_date|date('d.m.Y') }}</strong><br>
+                                                <small>{{ treatment.diagnosis|slice(0, 50) }}...</small>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <p class="text-muted">Keine Behandlungen vorhanden</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Appointments Tab -->
+                <div class="tab-pane fade" id="appointments">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Termine</span>
+                            <button class="btn btn-sm btn-primary" onclick="newAppointment({{ patient.id }})">
+                                <i class="fas fa-plus"></i> Neuer Termin
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Datum</th>
+                                            <th>Zeit</th>
+                                            <th>Typ</th>
+                                            <th>Status</th>
+                                            <th>Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for appointment in appointments %}
+                                        <tr>
+                                            <td>{{ appointment.appointment_date|date('d.m.Y') }}</td>
+                                            <td>{{ appointment.start_time|slice(0, 5) }} - {{ appointment.end_time|slice(0, 5) }}</td>
+                                            <td>{{ appointment.type }}</td>
+                                            <td>
+                                                <span class="badge bg-{{ appointment.status == 'completed' ? 'success' : (appointment.status == 'cancelled' ? 'danger' : 'warning') }}">
+                                                    {{ appointment.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="appointments.php?action=view&id={{ appointment.id }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">Keine Termine vorhanden</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Treatments Tab -->
+                <div class="tab-pane fade" id="treatments">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Behandlungen</span>
+                            <button class="btn btn-sm btn-primary" onclick="newTreatment({{ patient.id }})">
+                                <i class="fas fa-plus"></i> Neue Behandlung
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Datum</th>
+                                            <th>Therapeut</th>
+                                            <th>Diagnose</th>
+                                            <th>Dauer</th>
+                                            <th>Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for treatment in treatments %}
+                                        <tr>
+                                            <td>{{ treatment.treatment_date|date('d.m.Y') }}</td>
+                                            <td>{{ treatment.therapist_first_name }} {{ treatment.therapist_last_name }}</td>
+                                            <td>{{ treatment.diagnosis|slice(0, 50) }}{% if treatment.diagnosis|length > 50 %}...{% endif %}</td>
+                                            <td>{{ treatment.duration_minutes }} Min.</td>
+                                            <td>
+                                                <a href="treatments.php?action=view&id={{ treatment.id }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">Keine Behandlungen vorhanden</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes Tab -->
+                <div class="tab-pane fade" id="notes">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Notizen</span>
+                            <button class="btn btn-sm btn-primary" onclick="newNote({{ patient.id }})">
+                                <i class="fas fa-plus"></i> Neue Notiz
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            {% for note in notes %}
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h6>{{ note.title|default('Notiz') }}</h6>
+                                        <small class="text-muted">{{ note.created_at|date('d.m.Y H:i') }}</small>
+                                    </div>
+                                    <p>{{ note.content|nl2br }}</p>
+                                    <small class="text-muted">von {{ note.creator_first_name }} {{ note.creator_last_name }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-center text-muted">Keine Notizen vorhanden</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Documents Tab -->
+                <div class="tab-pane fade" id="documents">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Dokumente</span>
+                            <button class="btn btn-sm btn-primary" onclick="uploadDocument({{ patient.id }})">
+                                <i class="fas fa-upload"></i> Dokument hochladen
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            {% if documents %}
+                            <div class="list-group">
+                                {% for document in documents %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6>{{ document.title }}</h6>
+                                            <small class="text-muted">{{ document.type }} - {{ document.created_at|date('d.m.Y') }}</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-center text-muted">Keine Dokumente vorhanden</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Medical Tab -->
+                <div class="tab-pane fade" id="medical">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Medizinische Informationen</h5>
+                            
+                            {% if patient.medical_history %}
+                            <div class="mb-3">
+                                <strong>Krankengeschichte:</strong><br>
+                                {{ patient.medical_history|nl2br }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if patient.allergies %}
+                            <div class="mb-3">
+                                <strong>Allergien:</strong><br>
+                                <div class="alert alert-warning">
+                                    {{ patient.allergies|nl2br }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if patient.medications %}
+                            <div class="mb-3">
+                                <strong>Medikamente:</strong><br>
+                                {{ patient.medications|nl2br }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if patient.veterinarian %}
+                            <div class="mb-3">
+                                <strong>Tierarzt:</strong> {{ patient.veterinarian }}
+                                {% if patient.veterinarian_phone %}
+                                <br><strong>Tel:</strong> <a href="tel:{{ patient.veterinarian_phone }}">{{ patient.veterinarian_phone }}</a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if patient.insurance_name %}
+                            <div class="mb-3">
+                                <strong>Versicherung:</strong> {{ patient.insurance_name }}
+                                {% if patient.insurance_number %}
+                                <br><strong>Versicherungs-Nr:</strong> {{ patient.insurance_number }}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if not patient.medical_history and not patient.allergies and not patient.medications and not patient.veterinarian and not patient.insurance_name %}
+                            <p class="text-muted">Keine medizinischen Informationen hinterlegt</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Note Modal -->
+<div class="modal fade" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neue Notiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="noteForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="note_title" class="form-label">Titel</label>
+                        <input type="text" class="form-control" id="note_title" name="title">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="note_type" class="form-label">Typ</label>
+                        <select class="form-select" id="note_type" name="type">
+                            <option value="general">Allgemein</option>
+                            <option value="medical">Medizinisch</option>
+                            <option value="important">Wichtig</option>
+                            <option value="reminder">Erinnerung</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="note_content" class="form-label">Inhalt *</label>
+                        <textarea class="form-control" id="note_content" name="content" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="saveNote()">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editPatient(id) {
+    window.location.href = 'patients.php?action=edit&id=' + id;
+}
+
+function newAppointment(patientId) {
+    window.location.href = 'appointments.php?action=new&patient_id=' + patientId;
+}
+
+function newTreatment(patientId) {
+    alert('Neue Behandlung für Patient #' + patientId + ' - Wird implementiert');
+}
+
+function newNote(patientId) {
+    new bootstrap.Modal(document.getElementById('noteModal')).show();
+}
+
+function saveNote() {
+    const form = document.getElementById('noteForm');
+    const formData = new FormData(form);
+    formData.append('action', 'create');
+    formData.append('created_by', {{ user.id }});
+    
+    fetch('/public/api/notes.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Fehler beim Speichern: ' + error);
+    });
+}
+
+function uploadDocument(patientId) {
+    alert('Dokument hochladen für Patient #' + patientId + ' - Wird implementiert');
+}
+</script>
+{% endblock %}
