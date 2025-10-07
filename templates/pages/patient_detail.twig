@@ -1,0 +1,569 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}{{ patient.name }} - Patientenakte{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-in" x-data="patientDetailManager()" x-init="init({{ patient.id }})">
+    <!-- Header Section -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <div class="flex items-center space-x-3">
+                    <a href="/public/patients.php" class="text-purple-500 hover:text-purple-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </a>
+                    <h1 class="text-3xl font-heading font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                        {{ patient.name }}
+                    </h1>
+                    <span class="text-2xl">{{ patient.species|species_icon }}</span>
+                </div>
+                <div class="mt-2 text-gray-600 dark:text-gray-400">
+                    <p>Patient-Nr: #{{ patient.patient_number }}</p>
+                    <p>Besitzer: {{ patient.owner_first_name }} {{ patient.owner_last_name }}</p>
+                    {% if patient.birth_date %}
+                    <p>Alter: {{ patient.birth_date|age }} Jahre</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-4 sm:mt-0 flex space-x-2">
+                <button @click="editPatient()" 
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Bearbeiten
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 shadow-xl">
+        <div class="border-b border-purple-500/20">
+            <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                <button @click="activeTab = 'info'" 
+                        :class="activeTab === 'info' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Stammdaten
+                </button>
+                <button @click="activeTab = 'treatments'" 
+                        :class="activeTab === 'treatments' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Behandlungen
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-purple-500/20" x-text="treatments.length"></span>
+                </button>
+                <button @click="activeTab = 'appointments'" 
+                        :class="activeTab === 'appointments' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Termine
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-purple-500/20" x-text="appointments.length"></span>
+                </button>
+                <button @click="activeTab = 'invoices'" 
+                        :class="activeTab === 'invoices' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Rechnungen
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-purple-500/20" x-text="invoices.length"></span>
+                </button>
+                <button @click="activeTab = 'notes'" 
+                        :class="activeTab === 'notes' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Notizen
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-purple-500/20" x-text="notes.length"></span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-6">
+            <!-- Info Tab -->
+            <div x-show="activeTab === 'info'" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Patientendaten</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Name:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.name }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Tierart:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.species|species_name }}</dd>
+                            </div>
+                            {% if patient.breed %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Rasse:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.breed }}</dd>
+                            </div>
+                            {% endif %}
+                            {% if patient.gender %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Geschlecht:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.gender|gender_name }}</dd>
+                            </div>
+                            {% endif %}
+                            {% if patient.birth_date %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Geburtsdatum:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.birth_date|date('d.m.Y') }}</dd>
+                            </div>
+                            {% endif %}
+                            {% if patient.weight %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Gewicht:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.weight }} kg</dd>
+                            </div>
+                            {% endif %}
+                            {% if patient.microchip %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Chip-Nr:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.microchip }}</dd>
+                            </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Besitzer</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Name:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.owner_first_name }} {{ patient.owner_last_name }}</dd>
+                            </div>
+                            {% if patient.owner_email %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">E-Mail:</dt>
+                                <dd class="text-gray-900 dark:text-white">
+                                    <a href="mailto:{{ patient.owner_email }}" class="text-purple-500 hover:text-purple-400">{{ patient.owner_email }}</a>
+                                </dd>
+                            </div>
+                            {% endif %}
+                            {% if patient.owner_phone %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600 dark:text-gray-400">Telefon:</dt>
+                                <dd class="text-gray-900 dark:text-white">{{ patient.owner_phone }}</dd>
+                            </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+                
+                {% if patient.medical_history or patient.allergies or patient.medications %}
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Medizinische Informationen</h3>
+                    {% if patient.medical_history %}
+                    <div class="mb-3">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Krankengeschichte:</h4>
+                        <p class="text-gray-900 dark:text-white">{{ patient.medical_history }}</p>
+                    </div>
+                    {% endif %}
+                    {% if patient.allergies %}
+                    <div class="mb-3">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Allergien:</h4>
+                        <p class="text-gray-900 dark:text-white">{{ patient.allergies }}</p>
+                    </div>
+                    {% endif %}
+                    {% if patient.medications %}
+                    <div class="mb-3">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Medikamente:</h4>
+                        <p class="text-gray-900 dark:text-white">{{ patient.medications }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if patient.notes %}
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notizen</h3>
+                    <p class="text-gray-900 dark:text-white">{{ patient.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Treatments Tab -->
+            <div x-show="activeTab === 'treatments'" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Behandlungen</h3>
+                    <button @click="openTreatmentModal()" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Neue Behandlung
+                    </button>
+                </div>
+                
+                <div class="space-y-2">
+                    <template x-for="treatment in treatments" :key="treatment.id">
+                        <div class="bg-white/5 dark:bg-gray-700/30 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white" x-text="treatment.treatment_type"></h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="formatDate(treatment.treatment_date)"></p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="'Therapeut: ' + treatment.therapist_first_name + ' ' + treatment.therapist_last_name"></p>
+                                    <p class="text-sm mt-2 text-gray-700 dark:text-gray-300" x-text="treatment.diagnosis"></p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button @click="editTreatment(treatment)" class="text-blue-500 hover:text-blue-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteTreatment(treatment)" class="text-red-500 hover:text-red-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div x-show="treatments.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Keine Behandlungen vorhanden
+                </div>
+            </div>
+
+            <!-- Appointments Tab -->
+            <div x-show="activeTab === 'appointments'" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Termine</h3>
+                    <button @click="openAppointmentModal()" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Neuer Termin
+                    </button>
+                </div>
+                
+                <div class="space-y-2">
+                    <template x-for="appointment in appointments" :key="appointment.id">
+                        <div class="bg-white/5 dark:bg-gray-700/30 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">
+                                        <span x-text="formatDate(appointment.appointment_date)"></span>
+                                        <span x-text="' um ' + appointment.start_time.substring(0,5) + ' Uhr'"></span>
+                                    </h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="'Status: ' + appointment.status"></p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="'Therapeut: ' + appointment.therapist_first_name + ' ' + appointment.therapist_last_name"></p>
+                                    <p class="text-sm mt-2 text-gray-700 dark:text-gray-300" x-text="appointment.notes"></p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button @click="editAppointment(appointment)" class="text-blue-500 hover:text-blue-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteAppointment(appointment)" class="text-red-500 hover:text-red-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div x-show="appointments.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Keine Termine vorhanden
+                </div>
+            </div>
+
+            <!-- Invoices Tab -->
+            <div x-show="activeTab === 'invoices'" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rechnungen</h3>
+                    <button @click="openInvoiceModal()" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Neue Rechnung
+                    </button>
+                </div>
+                
+                <div class="space-y-2">
+                    <template x-for="invoice in invoices" :key="invoice.id">
+                        <div class="bg-white/5 dark:bg-gray-700/30 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">
+                                        Rechnung #<span x-text="invoice.invoice_number"></span>
+                                    </h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" x-text="'Datum: ' + formatDate(invoice.invoice_date)"></p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                                        Status: <span :class="getInvoiceStatusClass(invoice.status)" x-text="invoice.status"></span>
+                                    </p>
+                                    <p class="text-lg font-semibold text-gray-900 dark:text-white mt-2">
+                                        € <span x-text="formatCurrency(invoice.total)"></span>
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button @click="viewInvoice(invoice)" class="text-purple-500 hover:text-purple-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteInvoice(invoice)" class="text-red-500 hover:text-red-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div x-show="invoices.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Keine Rechnungen vorhanden
+                </div>
+            </div>
+
+            <!-- Notes Tab -->
+            <div x-show="activeTab === 'notes'" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Notizen</h3>
+                    <button @click="openNoteModal()" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Neue Notiz
+                    </button>
+                </div>
+                
+                <div class="space-y-2">
+                    <template x-for="note in notes" :key="note.id">
+                        <div class="bg-white/5 dark:bg-gray-700/30 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-900 dark:text-white" x-text="note.title || 'Notiz'"></h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                                        <span x-text="formatDate(note.created_at)"></span>
+                                        <span x-text="' von ' + note.creator_first_name + ' ' + note.creator_last_name"></span>
+                                    </p>
+                                    <p class="text-sm mt-2 text-gray-700 dark:text-gray-300" x-text="note.content"></p>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    <button @click="editNote(note)" class="text-blue-500 hover:text-blue-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteNote(note)" class="text-red-500 hover:text-red-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div x-show="notes.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Keine Notizen vorhanden
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function patientDetailManager() {
+    return {
+        patientId: null,
+        patientData: {},
+        treatments: [],
+        appointments: [],
+        invoices: [],
+        notes: [],
+        activeTab: 'info',
+        loading: false,
+
+        async init(patientId) {
+            this.patientId = patientId;
+            await this.loadPatientData();
+        },
+
+        async loadPatientData() {
+            this.loading = true;
+            try {
+                const response = await fetch(`/public/patient.php?action=get_by_id&id=${this.patientId}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.patientData = data.data.patient;
+                    this.treatments = data.data.treatments || [];
+                    this.appointments = data.data.appointments || [];
+                    this.invoices = data.data.invoices || [];
+                    this.notes = data.data.notes || [];
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Patientendaten:', error);
+                this.showNotification('Fehler beim Laden der Daten', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('de-DE');
+        },
+
+        formatCurrency(amount) {
+            return parseFloat(amount).toFixed(2).replace('.', ',');
+        },
+
+        getInvoiceStatusClass(status) {
+            const classes = {
+                'draft': 'text-gray-500',
+                'sent': 'text-blue-500',
+                'paid': 'text-green-500',
+                'overdue': 'text-red-500',
+                'cancelled': 'text-gray-400'
+            };
+            return classes[status] || 'text-gray-500';
+        },
+
+        editPatient() {
+            window.location.href = `/public/patients.php?action=edit&id=${this.patientId}`;
+        },
+
+        openTreatmentModal() {
+            // TODO: Implement modal
+            this.showNotification('Behandlung hinzufügen - In Entwicklung', 'info');
+        },
+
+        editTreatment(treatment) {
+            // TODO: Implement edit
+            this.showNotification('Behandlung bearbeiten - In Entwicklung', 'info');
+        },
+
+        async deleteTreatment(treatment) {
+            if (!confirm('Behandlung wirklich löschen?')) return;
+            
+            try {
+                const response = await fetch(`/public/treatments.php?action=delete&id=${treatment.id}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadPatientData();
+                    this.showNotification('Behandlung gelöscht', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        openAppointmentModal() {
+            // TODO: Implement modal
+            this.showNotification('Termin hinzufügen - In Entwicklung', 'info');
+        },
+
+        editAppointment(appointment) {
+            // TODO: Implement edit
+            this.showNotification('Termin bearbeiten - In Entwicklung', 'info');
+        },
+
+        async deleteAppointment(appointment) {
+            if (!confirm('Termin wirklich löschen?')) return;
+            
+            try {
+                const response = await fetch(`/public/appointments.php?action=delete&id=${appointment.id}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadPatientData();
+                    this.showNotification('Termin gelöscht', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        openInvoiceModal() {
+            // TODO: Implement modal
+            this.showNotification('Rechnung hinzufügen - In Entwicklung', 'info');
+        },
+
+        viewInvoice(invoice) {
+            window.location.href = `/public/invoices.php?action=view&id=${invoice.id}`;
+        },
+
+        async deleteInvoice(invoice) {
+            if (!confirm('Rechnung wirklich löschen?')) return;
+            
+            try {
+                const response = await fetch(`/public/invoices.php?action=delete&id=${invoice.id}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadPatientData();
+                    this.showNotification('Rechnung gelöscht', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        openNoteModal() {
+            // TODO: Implement modal
+            this.showNotification('Notiz hinzufügen - In Entwicklung', 'info');
+        },
+
+        editNote(note) {
+            // TODO: Implement edit
+            this.showNotification('Notiz bearbeiten - In Entwicklung', 'info');
+        },
+
+        async deleteNote(note) {
+            if (!confirm('Notiz wirklich löschen?')) return;
+            
+            try {
+                const response = await fetch(`/public/notes.php?action=delete&id=${note.id}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadPatientData();
+                    this.showNotification('Notiz gelöscht', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        showNotification(message, type) {
+            const notification = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${bgColor}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,290 +1,451 @@
 {% extends 'layouts/base.twig' %}
 
-{% block title %}Besitzerverwaltung - {{ parent() }}{% endblock %}
+{% block title %}Besitzverwaltung - {{ parent() }}{% endblock %}
 
 {% block content %}
-<div class="space-y-6 animate-in">
+<div class="space-y-6 animate-in" x-data="ownersManager()" x-init="init()">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-3xl font-heading font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
-                Besitzerverwaltung
+                Besitzverwaltung
             </h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">
-                Verwalten Sie die Kontaktdaten aller Tierbesitzer
+                Verwalten Sie Ihre Kunden und deren Kontaktdaten
             </p>
         </div>
         <div class="mt-4 sm:mt-0">
-            <button onclick="window.location.href='/public/owners.php?action=new'" 
+            <button @click="openCreateModal()" 
                     class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 Neuer Besitzer
             </button>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Gesamt Besitzer</p>
-                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">156</p>
-                </div>
-                <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Aktive Kunden</p>
-                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">142</p>
-                </div>
-                <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Neue (Monat)</p>
-                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">8</p>
-                </div>
-                <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Ø Tiere/Besitzer</p>
-                    <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">1.4</p>
-                </div>
-                <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
-                    </svg>
-                </div>
-            </div>
+    <!-- Search Section -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+        <div class="relative">
+            <input type="text" 
+                   x-model="searchQuery"
+                   @input="debounceSearch()"
+                   placeholder="Name, E-Mail oder Telefonnummer suchen..." 
+                   class="w-full px-4 py-2 pl-10 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white placeholder-gray-400">
+            <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
         </div>
     </div>
 
-    <!-- Search Section -->
-    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
-        <div class="flex flex-col md:flex-row gap-4">
-            <div class="flex-1">
-                <div class="relative">
-                    <input type="text" 
-                           placeholder="Nach Name, Email oder Telefonnummer suchen..." 
-                           class="w-full px-4 py-2 pl-10 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white placeholder-gray-400">
-                    <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-            </div>
-            <button class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                Suchen
-            </button>
-        </div>
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
     </div>
 
     <!-- Owners Table -->
-    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 overflow-hidden shadow-xl">
+    <div x-show="!loading" class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 overflow-hidden shadow-xl">
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-purple-600/20 border-b border-purple-500/30">
+                <thead class="bg-purple-600/20">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Besitzer
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Kontakt
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Tiere
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Letzte Aktivität
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Status
-                        </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Aktionen
-                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Kunde</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Kontakt</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Adresse</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Patienten</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-purple-500/10">
-                    <!-- Example Row 1 -->
-                    <tr class="hover:bg-purple-500/5 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold">
-                                    JS
+                    <template x-for="owner in owners" :key="owner.id">
+                        <tr class="hover:bg-purple-500/5 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        <span x-text="owner.first_name + ' ' + owner.last_name"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400" x-text="'#' + owner.customer_number"></div>
                                 </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Julia Schmidt</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">Kunde seit 2023</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm">
+                                    <div class="text-gray-900 dark:text-white" x-show="owner.email">
+                                        <a :href="'mailto:' + owner.email" class="hover:text-purple-500" x-text="owner.email"></a>
+                                    </div>
+                                    <div class="text-gray-500 dark:text-gray-400" x-show="owner.phone" x-text="owner.phone"></div>
+                                    <div class="text-gray-500 dark:text-gray-400" x-show="owner.mobile" x-text="owner.mobile"></div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 dark:text-white">julia.schmidt@email.de</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">+49 151 12345678</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex -space-x-2">
-                                <span class="inline-flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-full text-xs">🐕</span>
-                                <span class="inline-flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-full text-xs">🐈</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                            vor 2 Tagen
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
-                                Aktiv
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <button class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 mr-3">
-                                Bearbeiten
-                            </button>
-                            <button class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">
-                                Details
-                            </button>
-                        </td>
-                    </tr>
-                    
-                    <!-- Example Row 2 -->
-                    <tr class="hover:bg-purple-500/5 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full flex items-center justify-center text-white font-semibold">
-                                    TM
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    <div x-show="owner.street" x-text="owner.street + ' ' + (owner.house_number || '')"></div>
+                                    <div x-show="owner.postal_code || owner.city">
+                                        <span x-text="owner.postal_code"></span> <span x-text="owner.city"></span>
+                                    </div>
                                 </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Thomas Müller</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">Kunde seit 2022</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400" 
+                                      x-text="owner.patient_count + ' Patient(en)'"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <div class="flex space-x-2">
+                                    <button @click="viewOwner(owner)" class="text-purple-500 hover:text-purple-400" title="Details">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="editOwner(owner)" class="text-blue-500 hover:text-blue-400" title="Bearbeiten">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteOwner(owner)" class="text-red-500 hover:text-red-400" title="Löschen">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 dark:text-white">thomas.mueller@email.de</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">+49 172 98765432</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex -space-x-2">
-                                <span class="inline-flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-full text-xs">🐈</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                            vor 1 Woche
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
-                                Aktiv
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <button class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 mr-3">
-                                Bearbeiten
-                            </button>
-                            <button class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">
-                                Details
-                            </button>
-                        </td>
-                    </tr>
-                    
-                    <!-- Example Row 3 -->
-                    <tr class="hover:bg-purple-500/5 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold">
-                                    SW
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Sabine Wagner</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">Kunde seit 2021</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 dark:text-white">sabine.wagner@email.de</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">+49 160 11223344</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex -space-x-2">
-                                <span class="inline-flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-full text-xs">🐴</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                            vor 3 Tagen
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
-                                Aktiv
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <button class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 mr-3">
-                                Bearbeiten
-                            </button>
-                            <button class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">
-                                Details
-                            </button>
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-            Zeige <span class="font-medium text-purple-600">1-10</span> von <span class="font-medium text-purple-600">156</span> Besitzern
-        </p>
-        <div class="flex space-x-2">
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                Zurück
-            </button>
-            <button class="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                1
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                2
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                Weiter
-            </button>
+    <!-- No Results -->
+    <div x-show="!loading && owners.length === 0" class="text-center py-12">
+        <svg class="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Keine Besitzer gefunden</h3>
+        <p class="text-gray-500 dark:text-gray-400 mt-2">Fügen Sie Ihren ersten Kunden hinzu!</p>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div x-show="showModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+            </div>
+
+            <!-- Modal Panel -->
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+                <form @submit.prevent="saveOwner()">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" x-text="modalTitle"></h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Personal Information -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anrede</label>
+                                <select x-model="currentOwner.salutation"
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                    <option value="Herr">Herr</option>
+                                    <option value="Frau">Frau</option>
+                                    <option value="Divers">Divers</option>
+                                    <option value="Firma">Firma</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Firma</label>
+                                <input type="text" x-model="currentOwner.company"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vorname *</label>
+                                <input type="text" x-model="currentOwner.first_name" required
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nachname *</label>
+                                <input type="text" x-model="currentOwner.last_name" required
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-Mail</label>
+                                <input type="email" x-model="currentOwner.email"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
+                                <input type="tel" x-model="currentOwner.phone"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mobil</label>
+                                <input type="tel" x-model="currentOwner.mobile"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Address -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Straße</label>
+                                <input type="text" x-model="currentOwner.street"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hausnummer</label>
+                                <input type="text" x-model="currentOwner.house_number"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PLZ</label>
+                                <input type="text" x-model="currentOwner.postal_code"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stadt</label>
+                                <input type="text" x-model="currentOwner.city"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Land</label>
+                                <input type="text" x-model="currentOwner.country"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notizen</label>
+                                <textarea x-model="currentOwner.notes" rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit" 
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-base font-medium text-white hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Speichern
+                        </button>
+                        <button type="button" @click="closeModal()"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Abbrechen
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Animation on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        anime({
-            targets: '.animate-in > *',
-            translateY: [30, 0],
-            opacity: [0, 1],
-            duration: 800,
-            delay: anime.stagger(100),
-            easing: 'easeOutExpo'
-        });
-    });
+function ownersManager() {
+    return {
+        owners: [],
+        loading: false,
+        showModal: false,
+        modalTitle: 'Neuer Besitzer',
+        searchQuery: '',
+        searchTimeout: null,
+        currentOwner: {
+            id: null,
+            salutation: 'Herr',
+            first_name: '',
+            last_name: '',
+            company: '',
+            email: '',
+            phone: '',
+            mobile: '',
+            street: '',
+            house_number: '',
+            postal_code: '',
+            city: '',
+            country: 'Deutschland',
+            notes: ''
+        },
+
+        async init() {
+            await this.loadOwners();
+        },
+
+        async loadOwners() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    action: 'get_all',
+                    search: this.searchQuery
+                });
+
+                const response = await fetch(`/public/owners.php?${params}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.owners = data.data;
+                    
+                    // Animate table rows
+                    this.$nextTick(() => {
+                        anime({
+                            targets: 'tbody tr',
+                            translateX: [-20, 0],
+                            opacity: [0, 1],
+                            delay: anime.stagger(50),
+                            duration: 400,
+                            easing: 'easeOutQuad'
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Besitzer:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        debounceSearch() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.loadOwners();
+            }, 500);
+        },
+
+        openCreateModal() {
+            this.modalTitle = 'Neuer Besitzer';
+            this.currentOwner = {
+                id: null,
+                salutation: 'Herr',
+                first_name: '',
+                last_name: '',
+                company: '',
+                email: '',
+                phone: '',
+                mobile: '',
+                street: '',
+                house_number: '',
+                postal_code: '',
+                city: '',
+                country: 'Deutschland',
+                notes: ''
+            };
+            this.showModal = true;
+        },
+
+        editOwner(owner) {
+            this.modalTitle = 'Besitzer bearbeiten';
+            this.currentOwner = { ...owner };
+            this.showModal = true;
+        },
+
+        closeModal() {
+            this.showModal = false;
+        },
+
+        async saveOwner() {
+            try {
+                const formData = new FormData();
+                const action = this.currentOwner.id ? 'update' : 'create';
+                
+                Object.keys(this.currentOwner).forEach(key => {
+                    if (this.currentOwner[key] !== null) {
+                        formData.append(key, this.currentOwner[key]);
+                    }
+                });
+
+                const response = await fetch(`/public/owners.php?action=${action}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.closeModal();
+                    await this.loadOwners();
+                    this.showNotification(data.message, 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Speichern', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+                this.showNotification('Fehler beim Speichern', 'error');
+            }
+        },
+
+        async deleteOwner(owner) {
+            if (!confirm(`Möchten Sie ${owner.first_name} ${owner.last_name} wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('id', owner.id);
+                formData.append('action', 'delete');
+
+                const response = await fetch('/public/owners.php?action=delete', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadOwners();
+                    this.showNotification('Besitzer gelöscht!', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Löschen:', error);
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        viewOwner(owner) {
+            window.location.href = `/public/owners.php?action=view&id=${owner.id}`;
+        },
+
+        showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            anime({
+                targets: notification,
+                translateX: [100, 0],
+                opacity: [0, 1],
+                duration: 300,
+                easing: 'easeOutQuad'
+            });
+
+            setTimeout(() => {
+                anime({
+                    targets: notification,
+                    translateX: [0, 100],
+                    opacity: [1, 0],
+                    duration: 300,
+                    easing: 'easeInQuad',
+                    complete: () => notification.remove()
+                });
+            }, 3000);
+        }
+    };
+}
 </script>
 {% endblock %}

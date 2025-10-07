@@ -262,7 +262,9 @@ function patientsManager() {
                     species: this.speciesFilter
                 });
 
-                const response = await fetch(`/public/api_patients.php?${params}`);
+                const response = await fetch(`/public/patients.php?${params}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -289,7 +291,9 @@ function patientsManager() {
 
         async loadOwners() {
             try {
-                const response = await fetch('/public/owners.php?action=get_all');
+                const response = await fetch('/public/owners.php?action=get_all', {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -361,7 +365,8 @@ function patientsManager() {
                 formData.append('owner_id', this.currentPatient.owner_id);
                 formData.append('notes', this.currentPatient.notes);
 
-                const response = await fetch('/public/api_patients.php?action=' + action, {
+                const response = await fetch('/public/patients.php?action=' + action, {
+                    headers: { 'Accept': 'application/json' },
                     method: 'POST',
                     body: formData
                 });
@@ -393,7 +398,8 @@ function patientsManager() {
                 const formData = new FormData();
                 formData.append('id', patient.id);
 
-                const response = await fetch('/public/api_patients.php?action=delete', {
+                const response = await fetch('/public/patients.php?action=delete&id=' + patient.id, {
+                    headers: { 'Accept': 'application/json' },
                     method: 'POST',
                     body: formData
                 });
@@ -413,7 +419,7 @@ function patientsManager() {
         },
 
         viewPatient(patient) {
-            window.location.href = `/public/patients.php?action=view&id=${patient.id}`;
+            window.location.href = `/public/patient.php?id=${patient.id}`;
         },
 
         getSpeciesIcon(species) {

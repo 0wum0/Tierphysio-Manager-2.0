@@ -156,6 +156,59 @@ class Template {
             }
         }));
         
+        // Species icon filter
+        $this->twig->addFilter(new TwigFilter('species_icon', function($species) {
+            $icons = [
+                'dog' => '🐕',
+                'cat' => '🐈',
+                'horse' => '🐴',
+                'rabbit' => '🐰',
+                'bird' => '🦜',
+                'reptile' => '🦎',
+                'other' => '🐾'
+            ];
+            return $icons[$species] ?? '🐾';
+        }));
+        
+        // Species name filter
+        $this->twig->addFilter(new TwigFilter('species_name', function($species) {
+            $names = [
+                'dog' => 'Hund',
+                'cat' => 'Katze',
+                'horse' => 'Pferd',
+                'rabbit' => 'Hase',
+                'bird' => 'Vogel',
+                'reptile' => 'Reptil',
+                'other' => 'Andere'
+            ];
+            return $names[$species] ?? 'Unbekannt';
+        }));
+        
+        // Gender name filter
+        $this->twig->addFilter(new TwigFilter('gender_name', function($gender) {
+            $names = [
+                'male' => 'Männlich',
+                'female' => 'Weiblich',
+                'neutered_male' => 'Kastriert (männlich)',
+                'spayed_female' => 'Kastriert (weiblich)',
+                'unknown' => 'Unbekannt'
+            ];
+            return $names[$gender] ?? 'Unbekannt';
+        }));
+        
+        // Age filter (calculate age from birthdate)
+        $this->twig->addFilter(new TwigFilter('age', function($birthdate) {
+            if (empty($birthdate)) return '';
+            try {
+                $birth = new \DateTime($birthdate);
+                $today = new \DateTime();
+                $age = $today->diff($birth);
+                return $age->y;
+            } catch (\Exception $e) {
+                return '';
+            }
+        }));
+        
         // Optional: Add additional useful filters
         
         // Date format filter (zusätzlich zur Funktion für Flexibilität)
