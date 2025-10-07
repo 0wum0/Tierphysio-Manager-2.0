@@ -3,7 +3,7 @@
 {% block title %}Patientenverwaltung - {{ parent() }}{% endblock %}
 
 {% block content %}
-<div class="space-y-6 animate-in">
+<div class="space-y-6 animate-in" x-data="patientsManager()" x-init="init()">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -15,7 +15,7 @@
             </p>
         </div>
         <div class="mt-4 sm:mt-0">
-            <button onclick="window.location.href='/public/patients.php?action=new'" 
+            <button @click="openCreateModal()" 
                     class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -32,6 +32,8 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Suche</label>
                 <div class="relative">
                     <input type="text" 
+                           x-model="searchQuery"
+                           @input="debounceSearch()"
                            placeholder="Name, Besitzer oder Chipnummer eingeben..." 
                            class="w-full px-4 py-2 pl-10 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white placeholder-gray-400">
                     <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,125 +43,442 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tierart</label>
-                <select class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                <select x-model="speciesFilter" @change="loadPatients()" class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
                     <option value="">Alle Arten</option>
                     <option value="dog">🐕 Hund</option>
                     <option value="cat">🐈 Katze</option>
                     <option value="horse">🐴 Pferd</option>
+                    <option value="rabbit">🐰 Hase</option>
+                    <option value="bird">🦜 Vogel</option>
+                    <option value="reptile">🦎 Reptil</option>
                     <option value="other">🐾 Andere</option>
                 </select>
             </div>
         </div>
     </div>
 
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
+    </div>
+
     <!-- Patients Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Example Patient Card 1 -->
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 overflow-hidden hover:shadow-2xl hover:border-purple-400/40 transition-all duration-300 group">
-            <div class="aspect-video bg-gradient-to-br from-purple-600/20 to-indigo-600/20 relative">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
-                        <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
-                            <path d="M15 6.5C15 7.88071 16.1193 9 17.5 9C18.8807 9 20 7.88071 20 6.5C20 5.11929 18.8807 4 17.5 4C16.1193 4 15 5.11929 15 6.5Z"/>
-                        </svg>
+    <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Patient Cards -->
+        <template x-for="patient in patients" :key="patient.id">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 overflow-hidden hover:shadow-2xl hover:border-purple-400/40 transition-all duration-300 group">
+                <div class="aspect-video bg-gradient-to-br from-purple-600/20 to-indigo-600/20 relative">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="text-4xl" x-text="getSpeciesIcon(patient.species)"></span>
+                        </div>
+                    </div>
+                    <span class="absolute top-3 right-3 px-2 py-1 bg-green-500/80 text-white text-xs rounded-full">Aktiv</span>
+                </div>
+                <div class="p-5">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1" x-text="patient.name"></h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        <span x-text="getSpeciesName(patient.species)"></span>
+                        <span x-show="patient.breed" x-text="' • ' + patient.breed"></span>
+                        <span x-show="patient.birth_date" x-text="' • ' + calculateAge(patient.birth_date)"></span>
+                    </p>
+                    <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">
+                        Besitzer: <span x-text="patient.owner_first_name + ' ' + patient.owner_last_name"></span>
+                    </p>
+                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/20">
+                        <div class="flex space-x-2">
+                            <button @click="editPatient(patient)" class="text-blue-500 hover:text-blue-400 transition-colors" title="Bearbeiten">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button @click="deletePatient(patient)" class="text-red-500 hover:text-red-400 transition-colors" title="Löschen">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <button @click="viewPatient(patient)" class="text-purple-500 hover:text-purple-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <span class="absolute top-3 right-3 px-2 py-1 bg-green-500/80 text-white text-xs rounded-full">Aktiv</span>
             </div>
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Max</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Golden Retriever • 3 Jahre</p>
-                <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">Besitzer: Julia Schmidt</p>
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/20">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Letzte Behandlung: 15.11.2024</span>
-                    <button class="text-purple-500 hover:text-purple-400 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
+        </template>
 
-        <!-- Example Patient Card 2 -->
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 overflow-hidden hover:shadow-2xl hover:border-purple-400/40 transition-all duration-300 group">
-            <div class="aspect-video bg-gradient-to-br from-indigo-600/20 to-purple-600/20 relative">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
-                        <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
-                        </svg>
-                    </div>
-                </div>
-                <span class="absolute top-3 right-3 px-2 py-1 bg-green-500/80 text-white text-xs rounded-full">Aktiv</span>
-            </div>
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Luna</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Britisch Kurzhaar • 5 Jahre</p>
-                <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">Besitzer: Thomas Müller</p>
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/20">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Letzte Behandlung: 20.11.2024</span>
-                    <button class="text-purple-500 hover:text-purple-400 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add New Patient Card -->
-        <div class="bg-white/5 dark:bg-gray-800/30 backdrop-blur-md rounded-2xl border-2 border-dashed border-purple-500/30 overflow-hidden hover:border-purple-400/50 transition-all duration-300 group cursor-pointer"
-             onclick="window.location.href='/public/patients.php?action=new'">
-            <div class="h-full flex flex-col items-center justify-center p-8 text-center">
-                <div class="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4 group-hover:bg-purple-500/30 transition-colors">
+        <!-- Add Patient Card -->
+        <div @click="openCreateModal()" class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border-2 border-dashed border-purple-500/30 flex items-center justify-center min-h-[300px] hover:border-purple-400/50 transition-all duration-300 cursor-pointer group">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500/30 transition-colors">
                     <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Neuen Patienten hinzufügen</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Klicken Sie hier, um einen neuen tierischen Patienten zu registrieren</p>
+                <p class="text-gray-600 dark:text-gray-400">Patient hinzufügen</p>
             </div>
         </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-between mt-8">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-            Zeige <span class="font-medium text-purple-600">1-9</span> von <span class="font-medium text-purple-600">24</span> Patienten
-        </p>
-        <div class="flex space-x-2">
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                Zurück
-            </button>
-            <button class="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                1
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                2
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                3
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                Weiter
-            </button>
+    <!-- No Results -->
+    <div x-show="!loading && patients.length === 0" class="text-center py-12">
+        <svg class="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Keine Patienten gefunden</h3>
+        <p class="text-gray-500 dark:text-gray-400 mt-2">Fügen Sie Ihren ersten Patienten hinzu!</p>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div x-show="showModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+            </div>
+
+            <!-- Modal Panel -->
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <form @submit.prevent="savePatient()">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" x-text="modalTitle"></h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Name -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                                <input type="text" x-model="currentPatient.name" required
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Species -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tierart *</label>
+                                <select x-model="currentPatient.species" required
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                    <option value="">Bitte wählen</option>
+                                    <option value="dog">Hund</option>
+                                    <option value="cat">Katze</option>
+                                    <option value="horse">Pferd</option>
+                                    <option value="rabbit">Hase</option>
+                                    <option value="bird">Vogel</option>
+                                    <option value="reptile">Reptil</option>
+                                    <option value="other">Andere</option>
+                                </select>
+                            </div>
+
+                            <!-- Breed -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rasse</label>
+                                <input type="text" x-model="currentPatient.breed"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Birth Date -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Geburtsdatum</label>
+                                <input type="date" x-model="currentPatient.birth_date"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <!-- Owner -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Besitzer *</label>
+                                <select x-model="currentPatient.owner_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                    <option value="">Bitte wählen</option>
+                                    <template x-for="owner in owners" :key="owner.id">
+                                        <option :value="owner.id" x-text="owner.first_name + ' ' + owner.last_name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notizen</label>
+                                <textarea x-model="currentPatient.notes" rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit" 
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-base font-medium text-white hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Speichern
+                        </button>
+                        <button type="button" @click="closeModal()"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Abbrechen
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Animation on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        anime({
-            targets: '.animate-in > *',
-            translateY: [30, 0],
-            opacity: [0, 1],
-            duration: 800,
-            delay: anime.stagger(100),
-            easing: 'easeOutExpo'
-        });
-    });
+function patientsManager() {
+    return {
+        patients: [],
+        owners: [],
+        loading: false,
+        showModal: false,
+        modalTitle: 'Neuer Patient',
+        searchQuery: '',
+        speciesFilter: '',
+        searchTimeout: null,
+        currentPatient: {
+            id: null,
+            name: '',
+            species: '',
+            breed: '',
+            birth_date: '',
+            owner_id: '',
+            notes: ''
+        },
+
+        async init() {
+            await this.loadOwners();
+            await this.loadPatients();
+        },
+
+        async loadPatients() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    action: 'get_all',
+                    search: this.searchQuery,
+                    species: this.speciesFilter
+                });
+
+                const response = await fetch(`/public/api_patients.php?${params}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.patients = data.data;
+                    
+                    // Animate cards on load
+                    this.$nextTick(() => {
+                        anime({
+                            targets: '.grid > div',
+                            translateY: [20, 0],
+                            opacity: [0, 1],
+                            delay: anime.stagger(100),
+                            duration: 600,
+                            easing: 'easeOutQuad'
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Patienten:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async loadOwners() {
+            try {
+                const response = await fetch('/public/owners.php?action=get_all');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.owners = data.data;
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Besitzer:', error);
+            }
+        },
+
+        debounceSearch() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.loadPatients();
+            }, 500);
+        },
+
+        openCreateModal() {
+            this.modalTitle = 'Neuer Patient';
+            this.currentPatient = {
+                id: null,
+                name: '',
+                species: '',
+                breed: '',
+                birth_date: '',
+                owner_id: '',
+                notes: ''
+            };
+            this.showModal = true;
+        },
+
+        editPatient(patient) {
+            this.modalTitle = 'Patient bearbeiten';
+            this.currentPatient = {
+                id: patient.id,
+                name: patient.name,
+                species: patient.species,
+                breed: patient.breed || '',
+                birth_date: patient.birth_date || '',
+                owner_id: patient.owner_id,
+                notes: patient.notes || ''
+            };
+            this.showModal = true;
+        },
+
+        closeModal() {
+            this.showModal = false;
+            anime({
+                targets: '.modal',
+                opacity: [1, 0],
+                duration: 300,
+                easing: 'easeOutQuad'
+            });
+        },
+
+        async savePatient() {
+            try {
+                const formData = new FormData();
+                const action = this.currentPatient.id ? 'update' : 'create';
+                
+                formData.append('action', action);
+                if (this.currentPatient.id) {
+                    formData.append('id', this.currentPatient.id);
+                }
+                formData.append('name', this.currentPatient.name);
+                formData.append('species', this.currentPatient.species);
+                formData.append('breed', this.currentPatient.breed);
+                formData.append('birth_date', this.currentPatient.birth_date);
+                formData.append('owner_id', this.currentPatient.owner_id);
+                formData.append('notes', this.currentPatient.notes);
+
+                const response = await fetch('/public/api_patients.php?action=' + action, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.closeModal();
+                    await this.loadPatients();
+                    
+                    // Success animation
+                    const message = this.currentPatient.id ? 'Patient aktualisiert!' : 'Patient hinzugefügt!';
+                    this.showNotification(message, 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Speichern', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+                this.showNotification('Fehler beim Speichern', 'error');
+            }
+        },
+
+        async deletePatient(patient) {
+            if (!confirm(`Möchten Sie ${patient.name} wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('id', patient.id);
+
+                const response = await fetch('/public/api_patients.php?action=delete', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    await this.loadPatients();
+                    this.showNotification('Patient gelöscht!', 'success');
+                } else {
+                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Löschen:', error);
+                this.showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        viewPatient(patient) {
+            window.location.href = `/public/patients.php?action=view&id=${patient.id}`;
+        },
+
+        getSpeciesIcon(species) {
+            const icons = {
+                'dog': '🐕',
+                'cat': '🐈',
+                'horse': '🐴',
+                'rabbit': '🐰',
+                'bird': '🦜',
+                'reptile': '🦎',
+                'other': '🐾'
+            };
+            return icons[species] || '🐾';
+        },
+
+        getSpeciesName(species) {
+            const names = {
+                'dog': 'Hund',
+                'cat': 'Katze',
+                'horse': 'Pferd',
+                'rabbit': 'Hase',
+                'bird': 'Vogel',
+                'reptile': 'Reptil',
+                'other': 'Andere'
+            };
+            return names[species] || 'Unbekannt';
+        },
+
+        calculateAge(birthDate) {
+            if (!birthDate) return '';
+            const birth = new Date(birthDate);
+            const today = new Date();
+            const age = today.getFullYear() - birth.getFullYear();
+            return age + (age === 1 ? ' Jahr' : ' Jahre');
+        },
+
+        showNotification(message, type) {
+            // Temporäre Notification-Anzeige
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            anime({
+                targets: notification,
+                translateX: [100, 0],
+                opacity: [0, 1],
+                duration: 300,
+                easing: 'easeOutQuad'
+            });
+
+            setTimeout(() => {
+                anime({
+                    targets: notification,
+                    translateX: [0, 100],
+                    opacity: [1, 0],
+                    duration: 300,
+                    easing: 'easeInQuad',
+                    complete: () => notification.remove()
+                });
+            }, 3000);
+        }
+    };
+}
 </script>
 {% endblock %}
