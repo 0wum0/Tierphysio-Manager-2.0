@@ -23,15 +23,23 @@ function pdo() {
             
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            // Return JSON error for API calls
-            header('Content-Type: application/json; charset=utf-8');
-            http_response_code(500);
-            echo json_encode([
-                "status" => "error",
-                "message" => APP_DEBUG ? "Database connection failed: " . $e->getMessage() : "Database connection failed",
-                "data" => null
-            ]);
-            exit;
+            // Check if this is an API call
+            $is_api = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
+            
+            if ($is_api) {
+                // Return JSON error for API calls
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(500);
+                echo json_encode([
+                    "status" => "error",
+                    "message" => APP_DEBUG ? "Database connection failed: " . $e->getMessage() : "Database connection failed",
+                    "data" => null
+                ]);
+                exit;
+            } else {
+                // For non-API calls, throw exception to be handled by the application
+                throw $e;
+            }
         }
     }
     
@@ -53,21 +61,22 @@ function checkApiAuth() {
     
     // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
-        header('Content-Type: application/json; charset=utf-8');
-        http_response_code(401);
-        echo json_encode([
-            "status" => "error",
-            "message" => "Unauthorized - Please login",
-            "data" => null
-        ]);
-        exit;
+        // Only send JSON response for API calls
+        if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(401);
+            echo json_encode([
+                "status" => "error",
+                "message" => "Unauthorized - Please login",
+                "data" => null
+            ]);
+            exit;
+        } else {
+            // Redirect to login for non-API calls
+            header('Location: /public/login.php');
+            exit;
+        }
     }
     
     return true;
-}
-
-// Get PDO connection
-function pdo() {
-    global $pdo;
-    return $pdo;
 }

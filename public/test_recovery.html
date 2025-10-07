@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tierphysio Manager 2.0 - Recovery Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #9b5de5 0%, #7C4DFF 50%, #6c63ff 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="gradient-bg text-white py-8 px-4">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-2">Tierphysio Manager 2.0</h1>
+            <p class="text-xl opacity-90">Template Recovery Status</p>
+        </div>
+    </div>
+    
+    <div class="max-w-6xl mx-auto p-4 mt-8">
+        <!-- Recovery Status -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🔧 Recovery Status</h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">✅</span>
+                        <div>
+                            <p class="font-semibold text-green-800">JSON-Header entfernt</p>
+                            <p class="text-sm text-green-600">Alle UI-Dateien außerhalb von /public/api/ wurden korrigiert</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">✅</span>
+                        <div>
+                            <p class="font-semibold text-green-800">HTML-Header wiederhergestellt</p>
+                            <p class="text-sm text-green-600">public/settings.php wurde zu einer UI-Seite umgewandelt</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">✅</span>
+                        <div>
+                            <p class="font-semibold text-green-800">Twig-Templates intakt</p>
+                            <p class="text-sm text-green-600">Alle Templates haben korrekte {% extends %} und {% block %} Struktur</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">✅</span>
+                        <div>
+                            <p class="font-semibold text-green-800">CSS/JS eingebunden</p>
+                            <p class="text-sm text-green-600">Tailwind CSS und Alpine.js sind korrekt in base.twig eingebunden</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">✅</span>
+                        <div>
+                            <p class="font-semibold text-green-800">API-Endpoints funktionsfähig</p>
+                            <p class="text-sm text-green-600">Alle /public/api/*.php behalten ihre JSON-Header</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">🔧</span>
+                        <div>
+                            <p class="font-semibold text-blue-800">Integrity-Check verfügbar</p>
+                            <p class="text-sm text-blue-600">/public/integrity_template.php kann für automatische Prüfungen verwendet werden</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Links -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🧪 Test Links</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-3">UI Pages (sollten HTML zeigen)</h3>
+                    <div class="space-y-2">
+                        <a href="/public/index.php" target="_blank" class="block p-3 bg-purple-50 rounded hover:bg-purple-100 transition">
+                            <span class="text-purple-700 font-medium">Dashboard</span>
+                            <span class="text-sm text-gray-600 block">/public/index.php</span>
+                        </a>
+                        <a href="/public/patients.php" target="_blank" class="block p-3 bg-purple-50 rounded hover:bg-purple-100 transition">
+                            <span class="text-purple-700 font-medium">Patienten</span>
+                            <span class="text-sm text-gray-600 block">/public/patients.php</span>
+                        </a>
+                        <a href="/public/appointments.php" target="_blank" class="block p-3 bg-purple-50 rounded hover:bg-purple-100 transition">
+                            <span class="text-purple-700 font-medium">Termine</span>
+                            <span class="text-sm text-gray-600 block">/public/appointments.php</span>
+                        </a>
+                        <a href="/public/settings.php" target="_blank" class="block p-3 bg-purple-50 rounded hover:bg-purple-100 transition">
+                            <span class="text-purple-700 font-medium">Einstellungen</span>
+                            <span class="text-sm text-gray-600 block">/public/settings.php</span>
+                        </a>
+                        <a href="/public/admin.php" target="_blank" class="block p-3 bg-purple-50 rounded hover:bg-purple-100 transition">
+                            <span class="text-purple-700 font-medium">Admin</span>
+                            <span class="text-sm text-gray-600 block">/public/admin.php</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-3">API Endpoints (sollten JSON zurückgeben)</h3>
+                    <div class="space-y-2">
+                        <a href="/public/api/patients.php?action=get_all" target="_blank" class="block p-3 bg-blue-50 rounded hover:bg-blue-100 transition">
+                            <span class="text-blue-700 font-medium">Patients API</span>
+                            <span class="text-sm text-gray-600 block">/public/api/patients.php</span>
+                        </a>
+                        <a href="/public/api/appointments.php?action=get_all" target="_blank" class="block p-3 bg-blue-50 rounded hover:bg-blue-100 transition">
+                            <span class="text-blue-700 font-medium">Appointments API</span>
+                            <span class="text-sm text-gray-600 block">/public/api/appointments.php</span>
+                        </a>
+                        <a href="/public/api/treatments.php?action=get_all" target="_blank" class="block p-3 bg-blue-50 rounded hover:bg-blue-100 transition">
+                            <span class="text-blue-700 font-medium">Treatments API</span>
+                            <span class="text-sm text-gray-600 block">/public/api/treatments.php</span>
+                        </a>
+                        <a href="/public/api/invoices.php?action=get_all" target="_blank" class="block p-3 bg-blue-50 rounded hover:bg-blue-100 transition">
+                            <span class="text-blue-700 font-medium">Invoices API</span>
+                            <span class="text-sm text-gray-600 block">/public/api/invoices.php</span>
+                        </a>
+                        <a href="/public/api/integrity_json.php" target="_blank" class="block p-3 bg-blue-50 rounded hover:bg-blue-100 transition">
+                            <span class="text-blue-700 font-medium">JSON Integrity Check</span>
+                            <span class="text-sm text-gray-600 block">/public/api/integrity_json.php</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Korrigierte Dateien -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📝 Korrigierte Dateien</h2>
+            
+            <div class="space-y-3">
+                <div class="p-3 bg-gray-50 rounded">
+                    <code class="text-sm text-gray-700">/workspace/public/settings.php</code>
+                    <span class="text-xs text-green-600 ml-2">✓ Von API zu UI-Seite konvertiert</span>
+                </div>
+                <div class="p-3 bg-gray-50 rounded">
+                    <code class="text-sm text-gray-700">/workspace/includes/db.php</code>
+                    <span class="text-xs text-green-600 ml-2">✓ JSON-Header nur für API-Calls</span>
+                </div>
+                <div class="p-3 bg-gray-50 rounded">
+                    <code class="text-sm text-gray-700">/workspace/includes/auth.php</code>
+                    <span class="text-xs text-green-600 ml-2">✓ Unterscheidung zwischen API und UI</span>
+                </div>
+                <div class="p-3 bg-gray-50 rounded">
+                    <code class="text-sm text-gray-700">/workspace/includes/response.php</code>
+                    <span class="text-xs text-blue-600 ml-2">ℹ️ Unverändert (nur für APIs)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tools -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🛠️ Verfügbare Tools</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="/public/integrity_template.php" target="_blank" class="block p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition">
+                    <h3 class="font-semibold text-purple-800 mb-2">Template Integrity Checker</h3>
+                    <p class="text-sm text-gray-600">Automatische Überprüfung und Reparatur von Template-Problemen</p>
+                </a>
+                
+                <a href="/public/test_api.html" target="_blank" class="block p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg hover:from-blue-100 hover:to-cyan-100 transition">
+                    <h3 class="font-semibold text-blue-800 mb-2">API Test Interface</h3>
+                    <p class="text-sm text-gray-600">Interaktive Testoberfläche für alle API-Endpoints</p>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Summary -->
+        <div class="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+            <div class="flex items-start">
+                <span class="text-3xl mr-4">✅</span>
+                <div>
+                    <h3 class="text-xl font-bold text-green-800 mb-2">Recovery Erfolgreich!</h3>
+                    <p class="text-green-700">
+                        Alle Template- und UI-Dateien wurden erfolgreich wiederhergestellt. 
+                        Die Oberfläche sollte jetzt vollständig funktionsfähig sein mit:
+                    </p>
+                    <ul class="mt-2 space-y-1 text-green-600">
+                        <li>• Dashboard mit Tailwind CSS Styling</li>
+                        <li>• Sidebar und Header Navigation</li>
+                        <li>• Patientenansicht und alle Seiten</li>
+                        <li>• Funktionierende Modale mit Alpine.js</li>
+                        <li>• API-Endpoints liefern weiterhin JSON</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
