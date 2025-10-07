@@ -8,7 +8,6 @@
  * Send JSON success response
  */
 function json_success($data = [], $message = '') {
-    ob_clean(); // Clear any output before sending JSON
     header('Content-Type: application/json; charset=utf-8');
     http_response_code(200);
     
@@ -16,7 +15,7 @@ function json_success($data = [], $message = '') {
         'status' => 'success',
         'data' => $data,
         'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
@@ -24,7 +23,6 @@ function json_success($data = [], $message = '') {
  * Send JSON error response
  */
 function json_error($message, $code = 400) {
-    ob_clean(); // Clear any output before sending JSON
     header('Content-Type: application/json; charset=utf-8');
     http_response_code($code);
     
@@ -32,7 +30,7 @@ function json_error($message, $code = 400) {
         'status' => 'error',
         'data' => null,
         'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
@@ -40,7 +38,6 @@ function json_error($message, $code = 400) {
  * Send JSON response with custom status
  */
 function json_response($status, $data = null, $message = '', $code = 200) {
-    ob_clean(); // Clear any output before sending JSON
     header('Content-Type: application/json; charset=utf-8');
     http_response_code($code);
     
@@ -48,7 +45,7 @@ function json_response($status, $data = null, $message = '', $code = 200) {
         'status' => $status,
         'data' => $data,
         'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
