@@ -1,0 +1,59 @@
+# Tierphysio Manager 2.0 - Apache Configuration
+Options -Indexes
+DirectoryIndex index.php
+
+# Enable mod_rewrite
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    
+    # Redirect to public folder
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{REQUEST_URI} !^/installer/
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteCond %{REQUEST_URI} !^/admin/
+    RewriteRule ^(.*)$ public/$1 [L]
+    
+    # Redirect root to public/index.php
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^$ public/index.php [L]
+    
+    # API Routing
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^api/(.*)$ api/index.php?route=$1 [QSA,L]
+    
+    # Admin Routing
+    RewriteCond %{REQUEST_URI} ^/admin/
+    RewriteRule ^admin/(.*)$ admin/index.php?route=$1 [QSA,L]
+</IfModule>
+
+# PHP Settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Protect sensitive files
+<FilesMatch "\.(env|json|lock|md|log)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Protect includes folder
+<FilesMatch "^(includes|templates|backups|migrations|integrity)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

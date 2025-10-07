@@ -1,0 +1,106 @@
+{
+  "name": "Tierphysio Manager 2.0",
+  "short_name": "TierPhysio",
+  "description": "Moderne Praxisverwaltung für Tierphysiotherapie",
+  "start_url": "/public/index.php",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#9b5de5",
+  "background_color": "#ffffff",
+  "lang": "de-DE",
+  "categories": ["business", "medical", "productivity"],
+  "icons": [
+    {
+      "src": "/public/images/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/public/images/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Dashboard"
+    },
+    {
+      "src": "/public/images/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Neuer Patient",
+      "short_name": "Patient",
+      "description": "Neuen Patienten anlegen",
+      "url": "/public/patients.php?action=new",
+      "icons": [
+        {
+          "src": "/public/images/shortcut-patient.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Termin buchen",
+      "short_name": "Termin",
+      "description": "Neuen Termin vereinbaren",
+      "url": "/public/appointments.php?action=new",
+      "icons": [
+        {
+          "src": "/public/images/shortcut-appointment.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

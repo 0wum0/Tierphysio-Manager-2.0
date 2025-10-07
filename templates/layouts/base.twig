@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="{{ app.locale|slice(0,2) }}" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ app.description|default('Moderne Praxisverwaltung für Tierphysiotherapie') }}">
+    <meta name="theme-color" content="#9b5de5">
+    
+    <title>{% block title %}{{ app.name }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'heading': ['Poppins', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#9b5de5',
+                            600: '#7C4DFF',
+                            700: '#6c63ff',
+                            800: '#5b21b6',
+                            900: '#4c1d95'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(155, 93, 229, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(155, 93, 229, 0.8)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .font-heading {
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Glass Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Gradient Background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #9b5de5 0%, #7C4DFF 50%, #6c63ff 100%);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #9b5de5, #7C4DFF, #6c63ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Loader Animations */
+        .loader-paw {
+            animation: paw-pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes paw-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .loader-spinner {
+            border-top-color: #9b5de5;
+            animation: spinner 1.5s linear infinite;
+        }
+        
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(155, 93, 229, 0.1);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #9b5de5, #7C4DFF);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #7C4DFF, #6c63ff);
+        }
+        
+        /* Dark Mode Overrides */
+        .dark {
+            background-color: #0f0f23;
+        }
+        
+        .dark .glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 z-50 flex items-center justify-center gradient-bg" style="display: none;">
+        <div class="text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full glass loader-paw mb-4">
+                <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
+                    <path d="M15 6.5C15 7.88071 16.1193 9 17.5 9C18.8807 9 20 7.88071 20 6.5C20 5.11929 18.8807 4 17.5 4C16.1193 4 15 5.11929 15 6.5Z"/>
+                    <path d="M4 6.5C4 7.88071 5.11929 9 6.5 9C7.88071 9 9 7.88071 9 6.5C9 5.11929 7.88071 4 6.5 4C5.11929 4 4 5.11929 4 6.5Z"/>
+                    <path d="M10.5 15.5C10.5 16.8807 11.6193 18 13 18C14.3807 18 15.5 16.8807 15.5 15.5C15.5 14.1193 14.3807 13 13 13C11.6193 13 10.5 14.1193 10.5 15.5Z"/>
+                </svg>
+            </div>
+            <p class="text-white text-lg font-medium">{{ __('loading') }}...</p>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="min-h-full flex" x-data="{ sidebarOpen: false, profileDropdown: false, notificationsOpen: false }">
+        {% if user %}
+            <!-- Sidebar -->
+            {% include 'partials/sidebar.twig' %}
+            
+            <!-- Content Area -->
+            <div class="flex-1 flex flex-col">
+                <!-- Top Navigation -->
+                {% include 'partials/topbar.twig' %}
+                
+                <!-- Main Content -->
+                <main class="flex-1 overflow-y-auto">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <!-- Flash Messages -->
+                        {% include 'partials/flash.twig' %}
+                        
+                        <!-- Page Content -->
+                        {% block content %}{% endblock %}
+                    </div>
+                </main>
+                
+                <!-- Footer -->
+                {% include 'partials/footer.twig' %}
+            </div>
+        {% else %}
+            <!-- Full Width Content (Login/Register) -->
+            <div class="flex-1">
+                {% block fullcontent %}{% endblock %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Global Scripts -->
+    <script>
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            const darkMode = localStorage.getItem('darkMode') === 'true';
+            localStorage.setItem('darkMode', !darkMode);
+            document.documentElement.classList.toggle('dark');
+        }
+        
+        // Initialize Alpine.js data
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('app', {
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
+                }
+            });
+        });
+        
+        // Show toast notification
+        function showToast(message, type = 'info', duration = 5000) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const icons = {
+                success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
+                error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>',
+                warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>',
+                info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+            };
+            
+            toast.className = `flex items-center p-4 mb-4 ${colors[type]} text-white rounded-lg shadow-lg glass transform transition-all duration-300 translate-x-full`;
+            toast.innerHTML = `
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    ${icons[type]}
+                </svg>
+                <span class="font-medium">${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 hover:bg-white/20 inline-flex h-8 w-8">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+                toast.classList.add('translate-x-0');
+            }, 100);
+            
+            // Auto remove
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // AJAX Request Helper
+        async function apiRequest(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+            
+            try {
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Ein Fehler ist aufgetreten');
+                }
+                
+                return data;
+            } catch (error) {
+                showToast(error.message, 'error');
+                throw error;
+            }
+        }
+        
+        // Page load animations
+        document.addEventListener('DOMContentLoaded', () => {
+            anime({
+                targets: '.animate-in',
+                translateY: [20, 0],
+                opacity: [0, 1],
+                duration: 800,
+                delay: anime.stagger(100),
+                easing: 'easeOutExpo'
+            });
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
