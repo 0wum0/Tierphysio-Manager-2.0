@@ -13,6 +13,7 @@ echo "=== TIERPHYSIO MANAGER 2.0 - CRUD TEST ===\n\n";
 // Test database connection
 try {
     echo "1. Datenbankverbindung testen...\n";
+    $pdo = pdo();
     $stmt = $pdo->query("SELECT 1");
     echo "   ✅ Datenbankverbindung erfolgreich\n\n";
 } catch (Exception $e) {
