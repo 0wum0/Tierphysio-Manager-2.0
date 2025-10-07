@@ -34,21 +34,7 @@ class TierphysioAPI {
 
         try {
             const response = await fetch(url, options);
-            const text = await response.text();
-            
-            // Try to parse JSON
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch (jsonError) {
-                console.error('Invalid JSON response:', text);
-                // Check if it's a HTML error page
-                if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-                    throw new Error('Server returned HTML instead of JSON. Please check if you are logged in.');
-                } else {
-                    throw new Error('Invalid JSON response from server');
-                }
-            }
+            const result = await response.json();
             
             if (result.status === 'error') {
                 throw new Error(result.message || 'Ein Fehler ist aufgetreten');
@@ -68,29 +54,8 @@ class TierphysioAPI {
         const queryString = new URLSearchParams(filters).toString();
         const url = `${this.baseUrl}/${endpoint}.php?action=get_all${queryString ? '&' + queryString : ''}`;
         
-        try {
-            const response = await fetch(url);
-            const text = await response.text();
-            
-            // Try to parse JSON
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch (jsonError) {
-                console.error('Invalid JSON response:', text);
-                // Check if it's a HTML error page
-                if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-                    throw new Error('Server returned HTML instead of JSON. Please check if you are logged in.');
-                } else {
-                    throw new Error('Invalid JSON response from server');
-                }
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
-        }
+        const response = await fetch(url);
+        return await response.json();
     }
 
     /**
