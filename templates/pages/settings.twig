@@ -1,0 +1,479 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}Einstellungen - {{ parent() }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-in">
+    <!-- Header Section -->
+    <div>
+        <h1 class="text-3xl font-heading font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            Einstellungen
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+            Verwalten Sie Ihre Praxis- und Systemeinstellungen
+        </p>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-2">
+        <nav class="flex space-x-2" x-data="{ activeTab: 'practice' }">
+            <button @click="activeTab = 'practice'" 
+                    :class="activeTab === 'practice' ? 'bg-purple-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/20'"
+                    class="px-4 py-2 rounded-lg transition-all duration-200">
+                Praxisdaten
+            </button>
+            <button @click="activeTab = 'user'" 
+                    :class="activeTab === 'user' ? 'bg-purple-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/20'"
+                    class="px-4 py-2 rounded-lg transition-all duration-200">
+                Benutzerprofil
+            </button>
+            <button @click="activeTab = 'billing'" 
+                    :class="activeTab === 'billing' ? 'bg-purple-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/20'"
+                    class="px-4 py-2 rounded-lg transition-all duration-200">
+                Abrechnung
+            </button>
+            <button @click="activeTab = 'notifications'" 
+                    :class="activeTab === 'notifications' ? 'bg-purple-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/20'"
+                    class="px-4 py-2 rounded-lg transition-all duration-200">
+                Benachrichtigungen
+            </button>
+            <button @click="activeTab = 'backup'" 
+                    :class="activeTab === 'backup' ? 'bg-purple-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/20'"
+                    class="px-4 py-2 rounded-lg transition-all duration-200">
+                Backup & Sicherheit
+            </button>
+        </nav>
+    </div>
+
+    <!-- Settings Content -->
+    <div x-data="{ activeTab: 'practice' }">
+        <!-- Practice Data Tab -->
+        <div x-show="activeTab === 'practice'" class="space-y-6">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Praxisinformationen</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Praxisname</label>
+                        <input type="text" 
+                               value="Tierphysio Praxis Schmidt"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Inhaberin</label>
+                        <input type="text" 
+                               value="Dr. med. vet. Julia Schmidt"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Straße & Hausnummer</label>
+                        <input type="text" 
+                               value="Hauptstraße 42"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PLZ & Ort</label>
+                        <input type="text" 
+                               value="80331 München"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Telefon</label>
+                        <input type="tel" 
+                               value="+49 89 12345678"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">E-Mail</label>
+                        <input type="email" 
+                               value="info@tierphysio-schmidt.de"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Website</label>
+                        <input type="url" 
+                               value="www.tierphysio-schmidt.de"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Steuernummer</label>
+                        <input type="text" 
+                               value="143/123/45678"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Öffnungszeiten</label>
+                    <textarea rows="4" 
+                              class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">Mo-Fr: 09:00 - 18:00 Uhr
+Sa: 09:00 - 13:00 Uhr
+So: Geschlossen</textarea>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button class="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                        Änderungen speichern
+                    </button>
+                </div>
+            </div>
+
+            <!-- Logo Upload -->
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Praxis-Logo</h2>
+                
+                <div class="flex items-center space-x-6">
+                    <div class="w-32 h-32 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-2xl flex items-center justify-center">
+                        <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
+                            <path d="M15 6.5C15 7.88071 16.1193 9 17.5 9C18.8807 9 20 7.88071 20 6.5C20 5.11929 18.8807 4 17.5 4C16.1193 4 15 5.11929 15 6.5Z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            Empfohlene Größe: 500x500px, Format: PNG oder JPG
+                        </p>
+                        <div class="flex space-x-3">
+                            <button class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                Logo hochladen
+                            </button>
+                            <button class="px-4 py-2 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-purple-500/20 transition-colors">
+                                Entfernen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Profile Tab -->
+        <div x-show="activeTab === 'user'" class="space-y-6" style="display: none;">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Persönliche Daten</h2>
+                
+                <div class="flex items-start space-x-6 mb-6">
+                    <div class="w-24 h-24 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        JS
+                    </div>
+                    <div>
+                        <button class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors mb-2">
+                            Foto ändern
+                        </button>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            JPG, PNG oder GIF. Max. 2MB
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vorname</label>
+                        <input type="text" 
+                               value="Julia"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nachname</label>
+                        <input type="text" 
+                               value="Schmidt"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">E-Mail</label>
+                        <input type="email" 
+                               value="julia.schmidt@tierphysio.de"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Telefon</label>
+                        <input type="tel" 
+                               value="+49 151 12345678"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button class="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                        Profil aktualisieren
+                    </button>
+                </div>
+            </div>
+
+            <!-- Password Change -->
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Passwort ändern</h2>
+                
+                <div class="space-y-4 max-w-md">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Aktuelles Passwort</label>
+                        <input type="password" 
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neues Passwort</label>
+                        <input type="password" 
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neues Passwort bestätigen</label>
+                        <input type="password" 
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <button class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        Passwort ändern
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billing Tab -->
+        <div x-show="activeTab === 'billing'" class="space-y-6" style="display: none;">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Abrechnungseinstellungen</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Standard-Steuersatz (%)</label>
+                        <input type="number" 
+                               value="19"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zahlungsziel (Tage)</label>
+                        <input type="number" 
+                               value="14"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rechnungsnummer-Präfix</label>
+                        <input type="text" 
+                               value="RE-2024-"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nächste Rechnungsnummer</label>
+                        <input type="number" 
+                               value="157"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bankverbindung</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" 
+                               placeholder="IBAN"
+                               value="DE89 3704 0044 0532 0130 00"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                        <input type="text" 
+                               placeholder="BIC"
+                               value="COBADEFFXXX"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zahlungshinweis auf Rechnungen</label>
+                    <textarea rows="3" 
+                              class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">Bitte überweisen Sie den Betrag innerhalb von 14 Tagen auf das angegebene Konto. Vielen Dank für Ihr Vertrauen!</textarea>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button class="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                        Einstellungen speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div x-show="activeTab === 'notifications'" class="space-y-6" style="display: none;">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">E-Mail Benachrichtigungen</h2>
+                
+                <div class="space-y-4">
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Neue Terminbuchungen</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Benachrichtigung bei neuen Terminanfragen</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Terminabsagen</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Benachrichtigung bei Terminabsagen</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Zahlungseingänge</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Benachrichtigung bei bezahlten Rechnungen</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Überfällige Rechnungen</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Tägliche Erinnerung bei überfälligen Zahlungen</p>
+                        </div>
+                        <input type="checkbox" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Wöchentlicher Bericht</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Zusammenfassung der Woche per E-Mail</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">SMS Benachrichtigungen</h2>
+                
+                <div class="space-y-4">
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Terminerinnerungen an Kunden</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">24 Stunden vor dem Termin</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Terminbestätigungen</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Automatisch nach Buchung versenden</p>
+                        </div>
+                        <input type="checkbox" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                </div>
+
+                <div class="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                        <strong>SMS-Guthaben:</strong> 250 SMS verfügbar
+                        <button class="ml-2 text-purple-600 dark:text-purple-400 underline">Guthaben aufladen</button>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup & Security Tab -->
+        <div x-show="activeTab === 'backup'" class="space-y-6" style="display: none;">
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Automatische Backups</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Backup-Häufigkeit</label>
+                        <select class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                            <option value="daily">Täglich</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="monthly">Monatlich</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Backup-Zeit</label>
+                        <input type="time" 
+                               value="03:00"
+                               class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    </div>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 mr-3">
+                        <span class="text-gray-700 dark:text-gray-300">Automatische Backups aktiviert</span>
+                    </label>
+                </div>
+
+                <div class="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <p class="text-sm text-green-700 dark:text-green-300">
+                        <strong>Letztes Backup:</strong> Heute, 03:00 Uhr (erfolgreich)
+                    </p>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        Backup jetzt erstellen
+                    </button>
+                    <button class="px-6 py-2 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-purple-500/20 transition-colors">
+                        Backup wiederherstellen
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+                <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white mb-6">Sicherheit</h2>
+                
+                <div class="space-y-4">
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Zwei-Faktor-Authentifizierung</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Zusätzliche Sicherheit für Ihr Konto</p>
+                        </div>
+                        <button class="px-4 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors">
+                            Aktivieren
+                        </button>
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Automatische Abmeldung</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Nach 30 Minuten Inaktivität</p>
+                        </div>
+                        <input type="checkbox" checked class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                    </label>
+                    
+                    <label class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-lg hover:bg-white/10 cursor-pointer">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">IP-Whitelist</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Zugriff nur von definierten IP-Adressen</p>
+                        </div>
+                        <button class="px-4 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 text-gray-600 dark:text-gray-400 text-sm rounded-lg hover:bg-purple-500/20 transition-colors">
+                            Konfigurieren
+                        </button>
+                    </label>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="font-medium text-gray-900 dark:text-white mb-3">Letzte Anmeldungen</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                            <span>Heute, 08:45 Uhr</span>
+                            <span>192.168.1.1 (München)</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                            <span>Gestern, 14:22 Uhr</span>
+                            <span>192.168.1.1 (München)</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                            <span>25.11.2024, 09:15 Uhr</span>
+                            <span>192.168.1.1 (München)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Animation on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        anime({
+            targets: '.animate-in > *',
+            translateY: [30, 0],
+            opacity: [0, 1],
+            duration: 800,
+            delay: anime.stagger(100),
+            easing: 'easeOutExpo'
+        });
+    });
+</script>
+{% endblock %}
