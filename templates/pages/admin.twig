@@ -1,0 +1,306 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Admin-Panel</h1>
+    
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if action == 'overview' %}active{% endif %}" href="?action=overview">
+                <i class="fas fa-dashboard"></i> Übersicht
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if action == 'users' %}active{% endif %}" href="?action=users">
+                <i class="fas fa-users"></i> Benutzer
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if action == 'settings' %}active{% endif %}" href="?action=settings">
+                <i class="fas fa-cog"></i> Einstellungen
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if action == 'backup' %}active{% endif %}" href="?action=backup">
+                <i class="fas fa-download"></i> Backup
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if action == 'logs' %}active{% endif %}" href="?action=logs">
+                <i class="fas fa-list"></i> Aktivitäts-Log
+            </a>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content">
+        {% if action == 'overview' %}
+        <!-- Overview Tab -->
+        <div class="row">
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-primary text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="text-white-50 small">Benutzer</div>
+                                <div class="h3">{{ stats.users }}</div>
+                            </div>
+                            <i class="fas fa-users fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-success text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="text-white-50 small">Patienten</div>
+                                <div class="h3">{{ stats.patients }}</div>
+                            </div>
+                            <i class="fas fa-paw fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-warning text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="text-white-50 small">Behandlungen</div>
+                                <div class="h3">{{ stats.treatments }}</div>
+                            </div>
+                            <i class="fas fa-hand-holding-medical fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-info text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="text-white-50 small">Rechnungen</div>
+                                <div class="h3">{{ stats.invoices }}</div>
+                            </div>
+                            <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activities -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-clock me-1"></i>
+                Letzte Aktivitäten
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Benutzer</th>
+                                <th>Aktion</th>
+                                <th>Entität</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in recent_activities %}
+                            <tr>
+                                <td>{{ activity.created_at|date('d.m.Y H:i') }}</td>
+                                <td>{{ activity.first_name }} {{ activity.last_name }}</td>
+                                <td>{{ activity.action }}</td>
+                                <td>{{ activity.entity_type }} #{{ activity.entity_id }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">Keine Aktivitäten vorhanden</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        {% elseif action == 'users' %}
+        <!-- Users Tab -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-users me-1"></i>Benutzerverwaltung</span>
+                <button class="btn btn-primary btn-sm" onclick="addUser()">
+                    <i class="fas fa-plus"></i> Neuer Benutzer
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Benutzername</th>
+                                <th>Name</th>
+                                <th>E-Mail</th>
+                                <th>Rolle</th>
+                                <th>Status</th>
+                                <th>Letzter Login</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_item in users %}
+                            <tr>
+                                <td>{{ user_item.id }}</td>
+                                <td>{{ user_item.username }}</td>
+                                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
+                                <td>{{ user_item.email }}</td>
+                                <td>
+                                    <span class="badge bg-{{ user_item.role == 'admin' ? 'danger' : (user_item.role == 'employee' ? 'primary' : 'secondary') }}">
+                                        {{ user_item.role }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ user_item.is_active ? 'success' : 'danger' }}">
+                                        {{ user_item.is_active ? 'Aktiv' : 'Inaktiv' }}
+                                    </span>
+                                </td>
+                                <td>{{ user_item.last_login ? user_item.last_login|date('d.m.Y H:i') : '-' }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editUser({{ user_item.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if user_item.id != user.id %}
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user_item.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        {% elseif action == 'settings' %}
+        <!-- Settings Tab -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-cog me-1"></i>System-Einstellungen
+            </div>
+            <div class="card-body">
+                {% for category, settings in settings_grouped %}
+                <h5 class="border-bottom pb-2 mb-3">{{ category|capitalize }}</h5>
+                <div class="row mb-4">
+                    {% for setting in settings %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ setting.description ?: setting.key }}</label>
+                        {% if setting.type == 'boolean' %}
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="setting_{{ setting.id }}" 
+                                   {% if setting.value == '1' %}checked{% endif %}
+                                   {% if setting.is_system %}disabled{% endif %}>
+                            <label class="form-check-label" for="setting_{{ setting.id }}">
+                                Aktiviert
+                            </label>
+                        </div>
+                        {% elseif setting.type == 'number' %}
+                        <input type="number" class="form-control" value="{{ setting.value }}"
+                               {% if setting.is_system %}readonly{% endif %}>
+                        {% else %}
+                        <input type="text" class="form-control" value="{{ setting.value }}"
+                               {% if setting.is_system %}readonly{% endif %}>
+                        {% endif %}
+                        {% if setting.is_system %}
+                        <small class="text-muted">System-Einstellung (nicht änderbar)</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                
+                <button class="btn btn-primary">Einstellungen speichern</button>
+            </div>
+        </div>
+        
+        {% elseif action == 'backup' %}
+        <!-- Backup Tab -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-download me-1"></i>Backup & Wiederherstellung
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> {{ message|default('Backup-Funktionalität wird in einer späteren Version implementiert.') }}
+                </div>
+            </div>
+        </div>
+        
+        {% elseif action == 'logs' %}
+        <!-- Logs Tab -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-list me-1"></i>System-Aktivitäten
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Benutzer</th>
+                                <th>Aktion</th>
+                                <th>Entität</th>
+                                <th>IP-Adresse</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.created_at|date('d.m.Y H:i:s') }}</td>
+                                <td>{{ log.first_name }} {{ log.last_name }}</td>
+                                <td>{{ log.action }}</td>
+                                <td>{{ log.entity_type }} {% if log.entity_id %}#{{ log.entity_id }}{% endif %}</td>
+                                <td>{{ log.ip_address }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">Keine Logs vorhanden</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function addUser() {
+    // Placeholder für Benutzer hinzufügen
+    alert('Benutzer hinzufügen - Wird implementiert');
+}
+
+function editUser(id) {
+    // Placeholder für Benutzer bearbeiten
+    alert('Benutzer bearbeiten - Wird implementiert');
+}
+
+function deleteUser(id) {
+    if (confirm('Möchten Sie diesen Benutzer wirklich löschen?')) {
+        // Placeholder für Benutzer löschen
+        alert('Benutzer löschen - Wird implementiert');
+    }
+}
+</script>
+{% endblock %}

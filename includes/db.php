@@ -57,3 +57,9 @@ function checkApiAuth() {
     
     return true;
 }
+
+// Get PDO connection
+function pdo() {
+    global $pdo;
+    return $pdo;
+}

@@ -254,4 +254,8 @@ switch ($action) {
 }
 
 // Display template
-$template->display('pages/patients.twig', $data);
+if ($action === 'view') {
+    $template->display('pages/patient_detail.twig', $data);
+} else {
+    $template->display('pages/patients.twig', $data);
+}
