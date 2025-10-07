@@ -1,0 +1,323 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}Terminverwaltung - {{ parent() }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-in">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-heading font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                Terminverwaltung
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">
+                Planen und verwalten Sie alle Behandlungstermine
+            </p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <button onclick="window.location.href='/public/appointments.php?view=calendar'" 
+                    class="inline-flex items-center px-4 py-2 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-500/20 transition-all duration-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Kalenderansicht
+            </button>
+            <button onclick="window.location.href='/public/appointments.php?action=new'" 
+                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Neuer Termin
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Heute</p>
+                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">5</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Termine</p>
+                </div>
+                <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Diese Woche</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">23</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Termine</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Wartend</p>
+                    <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">3</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Bestätigung ausstehend</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Abgesagt</p>
+                    <p class="text-2xl font-bold text-red-600 dark:text-red-400">2</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Diese Woche</p>
+                </div>
+                <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Datum von</label>
+                <input type="date" 
+                       class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Datum bis</label>
+                <input type="date" 
+                       class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <select class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    <option value="">Alle Status</option>
+                    <option value="confirmed">Bestätigt</option>
+                    <option value="pending">Wartend</option>
+                    <option value="cancelled">Abgesagt</option>
+                    <option value="completed">Abgeschlossen</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Behandlungsart</label>
+                <select class="w-full px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white">
+                    <option value="">Alle Arten</option>
+                    <option value="initial">Ersttermin</option>
+                    <option value="followup">Folgetermin</option>
+                    <option value="emergency">Notfall</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 shadow-xl">
+        <div class="p-6 border-b border-purple-500/20">
+            <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white">
+                Heutige Termine - {{ "now"|date("l, d. F Y") }}
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                <!-- Appointment 1 -->
+                <div class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-xl hover:bg-white/10 dark:hover:bg-gray-700/50 transition-colors">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-2 h-12 bg-green-500 rounded-full"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                09:00 - 10:00 Uhr
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">60 Minuten</p>
+                        </div>
+                        <div class="ml-6">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Max (Golden Retriever)</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Besitzer: Julia Schmidt</p>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full">
+                                Physiotherapie
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
+                            Bestätigt
+                        </span>
+                        <button class="p-2 text-gray-600 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Appointment 2 -->
+                <div class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-xl hover:bg-white/10 dark:hover:bg-gray-700/50 transition-colors">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-2 h-12 bg-yellow-500 rounded-full"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                10:30 - 11:30 Uhr
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">60 Minuten</p>
+                        </div>
+                        <div class="ml-6">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Luna (Britisch Kurzhaar)</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Besitzer: Thomas Müller</p>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full">
+                                Massage
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 text-xs font-medium bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-full">
+                            Wartend
+                        </span>
+                        <button class="p-2 text-gray-600 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Appointment 3 -->
+                <div class="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-700/30 rounded-xl hover:bg-white/10 dark:hover:bg-gray-700/50 transition-colors">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-2 h-12 bg-green-500 rounded-full"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                14:00 - 15:00 Uhr
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">60 Minuten</p>
+                        </div>
+                        <div class="ml-6">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Bella (Labrador)</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Besitzer: Michael Weber</p>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full">
+                                Ersttermin
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
+                            Bestätigt
+                        </span>
+                        <button class="p-2 text-gray-600 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 shadow-xl">
+        <div class="p-6 border-b border-purple-500/20">
+            <h2 class="text-xl font-heading font-semibold text-gray-900 dark:text-white">
+                Kommende Termine
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-purple-600/10 border-b border-purple-500/20">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Datum & Zeit
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Patient
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Besitzer
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Behandlung
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Aktionen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-purple-500/10">
+                    <tr class="hover:bg-purple-500/5 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-white">Mi, 27.11.2024</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">09:00 - 10:00 Uhr</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">Charlie</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Beagle</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            Anna Bauer
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full">
+                                Physiotherapie
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
+                                Bestätigt
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <button class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Animation on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        anime({
+            targets: '.animate-in > *',
+            translateY: [30, 0],
+            opacity: [0, 1],
+            duration: 800,
+            delay: anime.stagger(100),
+            easing: 'easeOutExpo'
+        });
+    });
+</script>
+{% endblock %}
