@@ -5,6 +5,7 @@ use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\Extension\DebugExtension;
 use Twig\TwigFunction;
+use Twig\TwigFilter;
 
 /**
  * Template Engine Manager
@@ -38,6 +39,9 @@ class Template {
         
         // Add custom functions
         $this->addCustomFunctions();
+        
+        // Add custom filters
+        $this->addCustomFilters();
         
         // Add global variables
         $this->addGlobalVariables();
@@ -132,6 +136,61 @@ class Template {
         // Get setting function
         $this->twig->addFunction(new TwigFunction('setting', function($key, $default = null) {
             return $this->getSetting($key, $default);
+        }));
+    }
+    
+    /**
+     * Add custom Twig filters
+     */
+    private function addCustomFilters() {
+        // Time format filter
+        $this->twig->addFilter(new TwigFilter('time_format', function ($value) {
+            if (empty($value)) {
+                return '';
+            }
+            try {
+                $timestamp = is_numeric($value) ? (int)$value : strtotime($value);
+                return date('H:i', $timestamp);
+            } catch (\Exception $e) {
+                return '';
+            }
+        }));
+        
+        // Optional: Add additional useful filters
+        
+        // Date format filter (zusätzlich zur Funktion für Flexibilität)
+        $this->twig->addFilter(new TwigFilter('date_format_de', function ($value, $format = 'd.m.Y') {
+            if (empty($value)) {
+                return '';
+            }
+            try {
+                $timestamp = is_numeric($value) ? (int)$value : strtotime($value);
+                return date($format, $timestamp);
+            } catch (\Exception $e) {
+                return '';
+            }
+        }));
+        
+        // Currency filter (zusätzlich zur Funktion)
+        $this->twig->addFilter(new TwigFilter('currency', function ($amount) {
+            $symbol = defined('CURRENCY_SYMBOL') ? CURRENCY_SYMBOL : '€';
+            return number_format($amount, 2, ',', '.') . ' ' . $symbol;
+        }));
+        
+        // Truncate filter
+        $this->twig->addFilter(new TwigFilter('truncate', function ($string, $length = 30, $preserve = false, $separator = '...') {
+            if (mb_strlen($string) <= $length) {
+                return $string;
+            }
+            
+            if ($preserve) {
+                // Preserve whole words
+                if (false !== ($breakpoint = mb_strpos($string, ' ', $length))) {
+                    $length = $breakpoint;
+                }
+            }
+            
+            return mb_substr($string, 0, $length) . $separator;
         }));
     }
     
