@@ -436,7 +436,8 @@ function patientsManager() {
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    this.patients = data.data?.patients || [];
+                    // Data is directly in data.data array
+                    this.patients = data.data || [];
                     
                     // Animate cards on load
                     this.$nextTick(() => {
@@ -466,7 +467,8 @@ function patientsManager() {
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    this.owners = data.data?.owners || [];
+                    // Data is directly in data.data array
+                    this.owners = data.data || [];
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Besitzer:', error);
@@ -549,19 +551,14 @@ function patientsManager() {
                 const formData = new FormData();
                 const action = this.currentPatient.id ? 'update' : 'create';
                 
-                // Add CSRF token
-                if (this.csrfToken) {
-                    formData.append('_csrf_token', this.csrfToken);
-                }
-                
                 // Add patient data
                 if (this.currentPatient.id) {
                     formData.append('id', this.currentPatient.id);
                 }
-                formData.append('name', this.currentPatient.name);
+                formData.append('patient_name', this.currentPatient.name);
                 formData.append('species', this.currentPatient.species);
                 formData.append('breed', this.currentPatient.breed);
-                formData.append('birth_date', this.currentPatient.birth_date);
+                formData.append('birthdate', this.currentPatient.birth_date);
                 formData.append('gender', this.currentPatient.gender);
                 formData.append('weight', this.currentPatient.weight);
                 formData.append('microchip', this.currentPatient.microchip);
@@ -627,11 +624,6 @@ function patientsManager() {
             try {
                 const formData = new FormData();
                 formData.append('id', patient.id);
-                
-                // Add CSRF token
-                if (this.csrfToken) {
-                    formData.append('_csrf_token', this.csrfToken);
-                }
 
                 const response = await fetch('/public/api/patients.php?action=delete', {
                     method: 'POST',

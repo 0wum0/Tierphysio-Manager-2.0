@@ -23,6 +23,9 @@ function pdo() {
             
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
+            // Log error
+            error_log("DB Connection Error: " . $e->getMessage());
+            
             // Check if this is an API call
             $is_api = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
             
@@ -34,7 +37,7 @@ function pdo() {
                     "status" => "error",
                     "message" => APP_DEBUG ? "Database connection failed: " . $e->getMessage() : "Database connection failed",
                     "data" => null
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 exit;
             } else {
                 // For non-API calls, throw exception to be handled by the application

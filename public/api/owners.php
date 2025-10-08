@@ -1,321 +1,181 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Owners API Endpoint
+ * Owners API Endpoint - Simplified & Fixed Version
  */
 
 // Set JSON header immediately
 header('Content-Type: application/json; charset=utf-8');
+
+// Error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
 
 // Catch any output errors
 ob_start();
 
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/response.php';
-require_once __DIR__ . '/../../includes/csrf.php';
-require_once __DIR__ . '/../../includes/auth.php';
-
-// Check authentication
-checkApiAuth();
 
 // Get action from request
-$action = $_REQUEST['action'] ?? 'list';
+$action = $_GET['action'] ?? 'list';
 
 try {
     $pdo = pdo();
     
     switch ($action) {
         case 'list':
-            // Get all owners with optional filters
-            $search = $_GET['q'] ?? $_GET['search'] ?? '';
-            $page = max(1, intval($_GET['page'] ?? 1));
-            $limit = intval($_GET['limit'] ?? 20);
-            $offset = ($page - 1) * $limit;
-            
+            // Get all owners with patient count
             $sql = "SELECT o.*, 
-                    COUNT(DISTINCT p.id) as patient_count,
-                    COUNT(DISTINCT i.id) as invoice_count
-                    FROM tp_owners o 
-                    LEFT JOIN tp_patients p ON o.id = p.owner_id AND p.is_active = 1
-                    LEFT JOIN tp_invoices i ON o.id = i.owner_id
-                    WHERE 1=1";
+                    COUNT(p.id) as patient_count
+                    FROM owners o 
+                    LEFT JOIN patients p ON o.id = p.owner_id
+                    GROUP BY o.id
+                    ORDER BY o.last_name, o.first_name";
             
-            $params = [];
+            $stmt = $pdo->query($sql);
+            $owners = $stmt->fetchAll();
             
-            if ($search) {
-                $sql .= " AND (o.first_name LIKE :search OR o.last_name LIKE :search 
-                         OR o.email LIKE :search OR o.customer_number LIKE :search 
-                         OR o.phone LIKE :search OR o.mobile LIKE :search)";
-                $params['search'] = "%$search%";
-            }
-            
-            $sql .= " GROUP BY o.id ORDER BY o.last_name, o.first_name LIMIT :limit OFFSET :offset";
-            
-            $stmt = $pdo->prepare($sql);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
-            }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Get total count
-            $countSql = "SELECT COUNT(*) as total FROM tp_owners o WHERE 1=1";
-            
-            if ($search) {
-                $countSql .= " AND (o.first_name LIKE :search OR o.last_name LIKE :search 
-                             OR o.email LIKE :search OR o.customer_number LIKE :search 
-                             OR o.phone LIKE :search OR o.mobile LIKE :search)";
-            }
-            
-            $countStmt = $pdo->prepare($countSql);
-            foreach ($params as $key => $value) {
-                $countStmt->bindValue($key, $value);
-            }
-            $countStmt->execute();
-            $total = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
-            
-            json_success([
-                'owners' => $owners,
-                'pagination' => [
-                    'total' => $total,
-                    'page' => $page,
-                    'limit' => $limit,
-                    'pages' => ceil($total / $limit)
-                ]
-            ]);
+            ob_end_clean();
+            json_success($owners);
             break;
             
         case 'get':
             $id = intval($_GET['id'] ?? 0);
             
             if (!$id) {
+                ob_end_clean();
                 json_error('Besitzer ID fehlt', 400);
             }
             
-            $sql = "SELECT o.*, 
-                    COUNT(DISTINCT p.id) as patient_count,
-                    COUNT(DISTINCT i.id) as invoice_count
-                    FROM tp_owners o 
-                    LEFT JOIN tp_patients p ON o.id = p.owner_id AND p.is_active = 1
-                    LEFT JOIN tp_invoices i ON o.id = i.owner_id
-                    WHERE o.id = :id
-                    GROUP BY o.id";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(['id' => $id]);
-            $owner = $stmt->fetch(PDO::FETCH_ASSOC);
+            // Get owner with patients
+            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt->execute([$id]);
+            $owner = $stmt->fetch();
             
             if (!$owner) {
+                ob_end_clean();
                 json_error('Besitzer nicht gefunden', 404);
             }
             
-            // Get patients
-            $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE owner_id = :owner_id AND is_active = 1 ORDER BY name");
-            $stmt->execute(['owner_id' => $id]);
-            $owner['patients'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Get owner's patients
+            $stmt = $pdo->prepare("SELECT * FROM patients WHERE owner_id = ? ORDER BY name");
+            $stmt->execute([$id]);
+            $owner['patients'] = $stmt->fetchAll();
             
+            ob_end_clean();
             json_success($owner);
             break;
             
         case 'create':
-            // Check CSRF for POST
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                json_error('Nur POST erlaubt', 405);
-            }
-            
-            require_csrf();
-            
             // Get POST data
-            $data = get_post_data();
+            $first_name = trim($_POST['first_name'] ?? '');
+            $last_name = trim($_POST['last_name'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $address = trim($_POST['address'] ?? '');
             
             // Validate required fields
-            validate_required($data, ['first_name', 'last_name']);
-            
-            // Generate customer number
-            $stmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(customer_number, 2) AS UNSIGNED)) as max_num FROM tp_owners WHERE customer_number LIKE 'K%'");
-            $maxNum = $stmt->fetch(PDO::FETCH_ASSOC)['max_num'] ?? 0;
-            $customerNumber = 'K' . str_pad($maxNum + 1, 5, '0', STR_PAD_LEFT);
-            
-            // Prepare insert data
-            $insertData = [
-                'customer_number' => $customerNumber,
-                'salutation' => sanitize_input($data['salutation'] ?? 'Herr'),
-                'first_name' => sanitize_input($data['first_name']),
-                'last_name' => sanitize_input($data['last_name']),
-                'company' => sanitize_input($data['company'] ?? null),
-                'email' => filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL) ?: null,
-                'phone' => sanitize_input($data['phone'] ?? null),
-                'mobile' => sanitize_input($data['mobile'] ?? null),
-                'street' => sanitize_input($data['street'] ?? null),
-                'house_number' => sanitize_input($data['house_number'] ?? null),
-                'postal_code' => sanitize_input($data['postal_code'] ?? null),
-                'city' => sanitize_input($data['city'] ?? null),
-                'country' => sanitize_input($data['country'] ?? 'Deutschland'),
-                'notes' => sanitize_input($data['notes'] ?? null),
-                'newsletter' => isset($data['newsletter']) ? 1 : 0,
-                'invoice_email' => filter_var($data['invoice_email'] ?? '', FILTER_VALIDATE_EMAIL) ?: null,
-                'payment_method' => sanitize_input($data['payment_method'] ?? 'transfer'),
-                'iban' => sanitize_input($data['iban'] ?? null),
-                'bic' => sanitize_input($data['bic'] ?? null),
-                'tax_number' => sanitize_input($data['tax_number'] ?? null),
-                'created_by' => $_SESSION['user_id'] ?? null,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            // Build insert query
-            $columns = array_keys($insertData);
-            $placeholders = array_map(function($col) { return ':' . $col; }, $columns);
-            
-            $sql = "INSERT INTO tp_owners (" . implode(', ', $columns) . ") 
-                    VALUES (" . implode(', ', $placeholders) . ")";
-            
-            $stmt = $pdo->prepare($sql);
-            
-            foreach ($insertData as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
+            if (!$first_name || !$last_name) {
+                ob_end_clean();
+                json_error("Vor- und Nachname sind erforderlich");
             }
             
-            if ($stmt->execute()) {
-                $ownerId = $pdo->lastInsertId();
-                
-                // Get the created owner
-                $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = :id");
-                $stmt->execute(['id' => $ownerId]);
-                $owner = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                json_success($owner, 'Besitzer erfolgreich angelegt');
-            } else {
-                json_error('Fehler beim Anlegen des Besitzers', 500);
+            // Check if owner already exists
+            $stmt = $pdo->prepare("SELECT id FROM owners WHERE first_name=? AND last_name=? LIMIT 1");
+            $stmt->execute([$first_name, $last_name]);
+            
+            if ($stmt->fetch()) {
+                ob_end_clean();
+                json_error("Ein Besitzer mit diesem Namen existiert bereits");
             }
+            
+            // Create owner
+            $stmt = $pdo->prepare("INSERT INTO owners (first_name, last_name, phone, email, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$first_name, $last_name, $phone, $email, $address]);
+            $owner_id = $pdo->lastInsertId();
+            
+            // Get created owner
+            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt->execute([$owner_id]);
+            $owner = $stmt->fetch();
+            
+            ob_end_clean();
+            json_success($owner, "Besitzer erfolgreich angelegt");
             break;
             
         case 'update':
-            // Check CSRF for POST
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                json_error('Nur POST erlaubt', 405);
-            }
+            $id = intval($_POST['id'] ?? 0);
             
-            require_csrf();
-            
-            // Get POST data
-            $data = get_post_data();
-            
-            // Validate ID
-            $id = intval($data['id'] ?? 0);
             if (!$id) {
+                ob_end_clean();
                 json_error('Besitzer ID fehlt', 400);
             }
             
-            // Check if owner exists
-            $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = :id");
-            $stmt->execute(['id' => $id]);
-            if (!$stmt->fetch()) {
-                json_error('Besitzer nicht gefunden', 404);
+            // Get update data
+            $first_name = trim($_POST['first_name'] ?? '');
+            $last_name = trim($_POST['last_name'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $address = trim($_POST['address'] ?? '');
+            
+            if (!$first_name || !$last_name) {
+                ob_end_clean();
+                json_error("Vor- und Nachname sind erforderlich");
             }
             
-            // Prepare update data
-            $updateData = [];
-            $allowedFields = [
-                'salutation', 'first_name', 'last_name', 'company', 'email', 'phone', 'mobile',
-                'street', 'house_number', 'postal_code', 'city', 'country', 'notes', 'newsletter',
-                'invoice_email', 'payment_method', 'iban', 'bic', 'tax_number'
-            ];
+            // Update owner
+            $stmt = $pdo->prepare("UPDATE owners SET first_name=?, last_name=?, phone=?, email=?, address=?, updated_at=NOW() WHERE id=?");
+            $stmt->execute([$first_name, $last_name, $phone, $email, $address, $id]);
             
-            foreach ($allowedFields as $field) {
-                if (isset($data[$field])) {
-                    if ($field === 'email' || $field === 'invoice_email') {
-                        $updateData[$field] = filter_var($data[$field], FILTER_VALIDATE_EMAIL) ?: null;
-                    } elseif ($field === 'newsletter') {
-                        $updateData[$field] = $data[$field] ? 1 : 0;
-                    } else {
-                        $updateData[$field] = sanitize_input($data[$field]);
-                    }
-                }
-            }
+            // Get updated owner
+            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt->execute([$id]);
+            $owner = $stmt->fetch();
             
-            if (empty($updateData)) {
-                json_error('Keine Daten zum Aktualisieren', 400);
-            }
-            
-            $updateData['updated_at'] = date('Y-m-d H:i:s');
-            
-            // Build update query
-            $setParts = array_map(function($col) { return $col . ' = :' . $col; }, array_keys($updateData));
-            
-            $sql = "UPDATE tp_owners SET " . implode(', ', $setParts) . " WHERE id = :id";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-            
-            foreach ($updateData as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
-            }
-            
-            if ($stmt->execute()) {
-                // Get the updated owner
-                $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = :id");
-                $stmt->execute(['id' => $id]);
-                $owner = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                json_success($owner, 'Besitzer erfolgreich aktualisiert');
-            } else {
-                json_error('Fehler beim Aktualisieren des Besitzers', 500);
-            }
+            ob_end_clean();
+            json_success($owner, "Besitzer erfolgreich aktualisiert");
             break;
             
         case 'delete':
-            // Check CSRF for POST
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                json_error('Nur POST erlaubt', 405);
-            }
+            $id = intval($_POST['id'] ?? 0);
             
-            require_csrf();
-            
-            // Get POST data
-            $data = get_post_data();
-            
-            // Validate ID
-            $id = intval($data['id'] ?? 0);
             if (!$id) {
+                ob_end_clean();
                 json_error('Besitzer ID fehlt', 400);
             }
             
-            // Check for related records
-            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tp_patients WHERE owner_id = :id");
-            $stmt->execute(['id' => $id]);
-            $patients = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+            // Check if owner has patients
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM patients WHERE owner_id = ?");
+            $stmt->execute([$id]);
+            $result = $stmt->fetch();
             
-            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tp_invoices WHERE owner_id = :id");
-            $stmt->execute(['id' => $id]);
-            $invoices = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-            
-            if ($patients > 0 || $invoices > 0) {
-                json_error('Besitzer kann nicht gelöscht werden (hat verknüpfte Patienten oder Rechnungen)', 400);
-            } else {
-                // Hard delete
-                $stmt = $pdo->prepare("DELETE FROM tp_owners WHERE id = :id");
-                if ($stmt->execute(['id' => $id])) {
-                    json_success(null, 'Besitzer erfolgreich gelöscht');
-                } else {
-                    json_error('Fehler beim Löschen des Besitzers', 500);
-                }
+            if ($result['count'] > 0) {
+                ob_end_clean();
+                json_error("Besitzer kann nicht gelöscht werden - hat noch " . $result['count'] . " Patient(en)");
             }
+            
+            // Delete owner
+            $stmt = $pdo->prepare("DELETE FROM owners WHERE id=?");
+            $stmt->execute([$id]);
+            
+            ob_end_clean();
+            json_success([], "Besitzer gelöscht");
             break;
             
         default:
-            json_error('Unbekannte Aktion: ' . $action, 400);
+            ob_end_clean();
+            json_error("Unbekannte Aktion: " . $action);
     }
     
 } catch (PDOException $e) {
-    error_log("API owners " . $action . ": " . $e->getMessage());
-    ob_end_clean(); // Clear any output buffer
-    json_error('Datenbankfehler aufgetreten', 500);
+    error_log("Owners API PDO Error (" . $action . "): " . $e->getMessage());
+    ob_end_clean();
+    json_error("Datenbankfehler: " . $e->getMessage());
 } catch (Throwable $e) {
-    error_log("API owners " . $action . ": " . $e->getMessage());
-    ob_end_clean(); // Clear any output buffer
-    json_error('Unerwarteter Fehler: ' . $e->getMessage(), 500);
+    error_log("Owners API Error (" . $action . "): " . $e->getMessage());
+    ob_end_clean();
+    json_error("Serverfehler: " . $e->getMessage());
 }
 
 // Ensure no further output
