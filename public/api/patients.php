@@ -1,13 +1,13 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Patients API Endpoint - Simplified & Fixed Version
+ * Patients API Endpoint - Fixed with tp_ prefix, transactions & hardened
  */
 
 // Set JSON header immediately
 header('Content-Type: application/json; charset=utf-8');
 
-// Error reporting for debugging
+// Error reporting for production
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
@@ -17,31 +17,96 @@ ob_start();
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/response.php';
 
+// Helper function to generate patient number
+function generatePatientNumber($pdo) {
+    do {
+        $patient_number = 'P' . date('ymd') . rand(1000, 9999);
+        $stmt = $pdo->prepare("SELECT id FROM tp_patients WHERE patient_number = ?");
+        $stmt->execute([$patient_number]);
+    } while ($stmt->fetch());
+    
+    return $patient_number;
+}
+
+// Helper function to generate customer number for new owner
+function generateCustomerNumber($pdo) {
+    do {
+        $customer_number = 'K' . date('ymd') . rand(1000, 9999);
+        $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE customer_number = ?");
+        $stmt->execute([$customer_number]);
+    } while ($stmt->fetch());
+    
+    return $customer_number;
+}
+
 // Get action from request
 $action = $_GET['action'] ?? 'list';
 
 try {
-    $pdo = pdo();
+    $pdo = get_pdo();
     
     switch ($action) {
         case 'list':
-            // Get all patients with owner information
-            $sql = "SELECT p.*, 
-                    o.first_name, 
-                    o.last_name,
-                    o.phone,
-                    o.email,
-                    o.address
-                    FROM patients p 
-                    LEFT JOIN owners o ON p.owner_id = o.id 
-                    ORDER BY p.id DESC";
+            // Pagination parameters
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $per_page = max(1, min(100, intval($_GET['per_page'] ?? 20)));
+            $offset = ($page - 1) * $per_page;
+            $search = trim($_GET['search'] ?? '');
             
-            $stmt = $pdo->query($sql);
+            // Base query
+            $where_clause = '';
+            $params = [];
+            
+            if ($search) {
+                $where_clause = " WHERE p.name LIKE :search OR o.first_name LIKE :search OR o.last_name LIKE :search ";
+                $params['search'] = '%' . $search . '%';
+            }
+            
+            // Get total count
+            $count_sql = "SELECT COUNT(*) as total FROM tp_patients p 
+                          LEFT JOIN tp_owners o ON p.owner_id = o.id" . $where_clause;
+            $stmt = $pdo->prepare($count_sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(':' . $key, $value);
+            }
+            $stmt->execute();
+            $total = $stmt->fetch()['total'];
+            
+            // Get patients with owner information
+            $sql = "SELECT p.*, 
+                    o.first_name as owner_first_name, 
+                    o.last_name as owner_last_name,
+                    o.customer_number,
+                    o.phone as owner_phone,
+                    o.mobile as owner_mobile,
+                    o.email as owner_email,
+                    CONCAT(o.street, ' ', o.house_number, ', ', o.postal_code, ' ', o.city) as owner_address
+                    FROM tp_patients p 
+                    LEFT JOIN tp_owners o ON p.owner_id = o.id 
+                    " . $where_clause . "
+                    ORDER BY p.created_at DESC
+                    LIMIT :limit OFFSET :offset";
+            
+            $stmt = $pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(':' . $key, $value);
+            }
+            $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
             $patients = $stmt->fetchAll();
             
-            // Clean output buffer before sending response
             ob_end_clean();
-            json_success($patients);
+            echo json_encode([
+                'ok' => true,
+                'data' => $patients,
+                'pagination' => [
+                    'page' => $page,
+                    'per_page' => $per_page,
+                    'total' => $total,
+                    'total_pages' => ceil($total / $per_page)
+                ]
+            ], JSON_UNESCAPED_UNICODE);
             break;
             
         case 'get':
@@ -49,17 +114,24 @@ try {
             
             if (!$id) {
                 ob_end_clean();
-                json_error('Patient ID fehlt', 400);
+                echo json_encode(['ok' => false, 'error' => 'Patient ID fehlt'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
             $sql = "SELECT p.*, 
-                    o.first_name, 
-                    o.last_name,
-                    o.phone,
-                    o.email,
-                    o.address
-                    FROM patients p 
-                    LEFT JOIN owners o ON p.owner_id = o.id 
+                    o.id as owner_id,
+                    o.customer_number,
+                    o.first_name as owner_first_name, 
+                    o.last_name as owner_last_name,
+                    o.phone as owner_phone,
+                    o.mobile as owner_mobile,
+                    o.email as owner_email,
+                    o.street as owner_street,
+                    o.house_number as owner_house_number,
+                    o.postal_code as owner_postal_code,
+                    o.city as owner_city
+                    FROM tp_patients p 
+                    LEFT JOIN tp_owners o ON p.owner_id = o.id 
                     WHERE p.id = :id";
             
             $stmt = $pdo->prepare($sql);
@@ -68,116 +140,326 @@ try {
             
             if (!$patient) {
                 ob_end_clean();
-                json_error('Patient nicht gefunden', 404);
+                echo json_encode(['ok' => false, 'error' => 'Patient nicht gefunden'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
+            // Get treatment history
+            $stmt = $pdo->prepare("
+                SELECT t.*, u.first_name as therapist_first_name, u.last_name as therapist_last_name
+                FROM tp_treatments t
+                LEFT JOIN tp_users u ON t.therapist_id = u.id
+                WHERE t.patient_id = ?
+                ORDER BY t.treatment_date DESC
+                LIMIT 10
+            ");
+            $stmt->execute([$id]);
+            $patient['recent_treatments'] = $stmt->fetchAll();
+            
             ob_end_clean();
-            json_success($patient);
+            echo json_encode(['ok' => true, 'data' => $patient], JSON_UNESCAPED_UNICODE);
             break;
             
         case 'create':
-            // Get POST data
-            $owner_first = trim($_POST['owner_first_name'] ?? $_POST['owner_first'] ?? '');
-            $owner_last = trim($_POST['owner_last_name'] ?? $_POST['owner_last'] ?? '');
-            $phone = trim($_POST['owner_phone'] ?? $_POST['phone'] ?? '');
-            $email = trim($_POST['owner_email'] ?? $_POST['email'] ?? '');
-            $address = trim($_POST['owner_address'] ?? $_POST['address'] ?? '');
+            // Get input data (support both form-data and JSON)
+            $input = $_POST;
+            if (empty($input)) {
+                $json = file_get_contents('php://input');
+                $input = json_decode($json, true) ?? [];
+            }
             
-            $patient_name = trim($_POST['patient_name'] ?? $_POST['name'] ?? '');
-            $species = trim($_POST['species'] ?? '');
-            $breed = trim($_POST['breed'] ?? '');
-            $birthdate = trim($_POST['birthdate'] ?? $_POST['birth_date'] ?? '');
-            $notes = trim($_POST['notes'] ?? '');
+            // Patient data
+            $patient_name = trim($input['name'] ?? $input['patient_name'] ?? '');
+            $species = trim($input['species'] ?? 'other');
+            $breed = trim($input['breed'] ?? '');
+            $color = trim($input['color'] ?? '');
+            $gender = trim($input['gender'] ?? 'unknown');
+            $birth_date = trim($input['birth_date'] ?? $input['birthdate'] ?? '');
+            $weight = floatval($input['weight'] ?? 0);
+            $microchip = trim($input['microchip'] ?? '');
+            $notes = trim($input['notes'] ?? '');
+            $medical_history = trim($input['medical_history'] ?? '');
+            $allergies = trim($input['allergies'] ?? '');
+            $medications = trim($input['medications'] ?? '');
+            
+            // Owner data (if owner_id is 0 or null, create new owner)
+            $owner_id = intval($input['owner_id'] ?? 0);
             
             // Validate required fields
-            if (!$patient_name || !$owner_first) {
+            if (!$patient_name) {
                 ob_end_clean();
-                json_error("Pflichtfelder fehlen (Patient Name und Besitzer Vorname sind erforderlich)");
+                echo json_encode(['ok' => false, 'error' => 'Patientenname ist erforderlich'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
-            // Check if owner exists or create new one
-            $stmt = $pdo->prepare("SELECT id FROM owners WHERE first_name=? AND last_name=? LIMIT 1");
-            $stmt->execute([$owner_first, $owner_last]);
-            $owner = $stmt->fetch();
-            
-            if (!$owner) {
-                // Create new owner
-                $stmt = $pdo->prepare("INSERT INTO owners (first_name, last_name, phone, email, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-                $stmt->execute([$owner_first, $owner_last, $phone, $email, $address]);
-                $owner_id = $pdo->lastInsertId();
-            } else {
-                $owner_id = $owner['id'];
+            if (!$species) {
+                ob_end_clean();
+                echo json_encode(['ok' => false, 'error' => 'Tierart ist erforderlich'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
-            // Create patient
-            $stmt = $pdo->prepare("INSERT INTO patients (name, species, breed, birthdate, owner_id, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$patient_name, $species, $breed, $birthdate ?: null, $owner_id, $notes]);
-            $patient_id = $pdo->lastInsertId();
+            // Begin transaction
+            $pdo->beginTransaction();
             
-            ob_end_clean();
-            json_success([
-                "patient_id" => $patient_id,
-                "owner_id" => $owner_id
-            ], "Patient erfolgreich angelegt");
+            try {
+                // If no owner_id provided, create new owner
+                if (!$owner_id) {
+                    $owner_first = trim($input['owner_first_name'] ?? '');
+                    $owner_last = trim($input['owner_last_name'] ?? '');
+                    $owner_company = trim($input['owner_company'] ?? '');
+                    $owner_phone = trim($input['owner_phone'] ?? '');
+                    $owner_mobile = trim($input['owner_mobile'] ?? '');
+                    $owner_email = trim($input['owner_email'] ?? '');
+                    $owner_street = trim($input['owner_street'] ?? '');
+                    $owner_house_number = trim($input['owner_house_number'] ?? '');
+                    $owner_postal_code = trim($input['owner_postal_code'] ?? '');
+                    $owner_city = trim($input['owner_city'] ?? '');
+                    $owner_salutation = trim($input['owner_salutation'] ?? 'Herr');
+                    
+                    // Validate owner data
+                    if ((!$owner_first || !$owner_last) && !$owner_company) {
+                        $pdo->rollBack();
+                        ob_end_clean();
+                        echo json_encode(['ok' => false, 'error' => 'Besitzer: Vor-/Nachname oder Firma erforderlich'], JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+                    
+                    // Generate customer number
+                    $customer_number = generateCustomerNumber($pdo);
+                    
+                    // Create new owner
+                    $stmt = $pdo->prepare("
+                        INSERT INTO tp_owners (
+                            customer_number, salutation, first_name, last_name, company,
+                            phone, mobile, email, street, house_number, 
+                            postal_code, city, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ");
+                    
+                    $stmt->execute([
+                        $customer_number, $owner_salutation, $owner_first, $owner_last, $owner_company,
+                        $owner_phone, $owner_mobile, $owner_email, $owner_street, $owner_house_number,
+                        $owner_postal_code, $owner_city
+                    ]);
+                    
+                    $owner_id = $pdo->lastInsertId();
+                } else {
+                    // Verify owner exists
+                    $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE id = ?");
+                    $stmt->execute([$owner_id]);
+                    if (!$stmt->fetch()) {
+                        $pdo->rollBack();
+                        ob_end_clean();
+                        echo json_encode(['ok' => false, 'error' => 'Besitzer nicht gefunden'], JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+                }
+                
+                // Generate patient number
+                $patient_number = generatePatientNumber($pdo);
+                
+                // Create patient
+                $stmt = $pdo->prepare("
+                    INSERT INTO tp_patients (
+                        patient_number, owner_id, name, species, breed, color,
+                        gender, birth_date, weight, microchip, medical_history,
+                        allergies, medications, notes, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+                
+                $stmt->execute([
+                    $patient_number, $owner_id, $patient_name, $species, $breed, $color,
+                    $gender, $birth_date ?: null, $weight ?: null, $microchip,
+                    $medical_history, $allergies, $medications, $notes
+                ]);
+                
+                $patient_id = $pdo->lastInsertId();
+                
+                // Commit transaction
+                $pdo->commit();
+                
+                // Get created patient with owner info
+                $stmt = $pdo->prepare("
+                    SELECT p.*, o.first_name as owner_first_name, o.last_name as owner_last_name,
+                           o.customer_number, o.email as owner_email
+                    FROM tp_patients p
+                    JOIN tp_owners o ON p.owner_id = o.id
+                    WHERE p.id = ?
+                ");
+                $stmt->execute([$patient_id]);
+                $patient = $stmt->fetch();
+                
+                ob_end_clean();
+                echo json_encode([
+                    'ok' => true,
+                    'patient_id' => $patient_id,
+                    'owner_id' => $owner_id,
+                    'data' => $patient,
+                    'message' => 'Patient erfolgreich angelegt'
+                ], JSON_UNESCAPED_UNICODE);
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
             
         case 'update':
-            $id = intval($_POST['id'] ?? 0);
+            // Get input data
+            $input = $_POST;
+            if (empty($input)) {
+                $json = file_get_contents('php://input');
+                $input = json_decode($json, true) ?? [];
+            }
+            
+            $id = intval($input['id'] ?? 0);
             
             if (!$id) {
                 ob_end_clean();
-                json_error('Patient ID fehlt', 400);
+                echo json_encode(['ok' => false, 'error' => 'Patient ID fehlt'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            // Check if patient exists
+            $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE id = ?");
+            $stmt->execute([$id]);
+            if (!$stmt->fetch()) {
+                ob_end_clean();
+                echo json_encode(['ok' => false, 'error' => 'Patient nicht gefunden'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
             // Get update data
-            $patient_name = trim($_POST['patient_name'] ?? $_POST['name'] ?? '');
-            $species = trim($_POST['species'] ?? '');
-            $breed = trim($_POST['breed'] ?? '');
-            $birthdate = trim($_POST['birthdate'] ?? $_POST['birth_date'] ?? '');
-            $notes = trim($_POST['notes'] ?? '');
+            $patient_name = trim($input['name'] ?? $input['patient_name'] ?? '');
+            $species = trim($input['species'] ?? 'other');
+            $breed = trim($input['breed'] ?? '');
+            $color = trim($input['color'] ?? '');
+            $gender = trim($input['gender'] ?? 'unknown');
+            $birth_date = trim($input['birth_date'] ?? $input['birthdate'] ?? '');
+            $weight = floatval($input['weight'] ?? 0);
+            $microchip = trim($input['microchip'] ?? '');
+            $notes = trim($input['notes'] ?? '');
+            $medical_history = trim($input['medical_history'] ?? '');
+            $allergies = trim($input['allergies'] ?? '');
+            $medications = trim($input['medications'] ?? '');
             
             if (!$patient_name) {
                 ob_end_clean();
-                json_error("Patient Name ist erforderlich");
+                echo json_encode(['ok' => false, 'error' => 'Patientenname ist erforderlich'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
             // Update patient
-            $stmt = $pdo->prepare("UPDATE patients SET name=?, species=?, breed=?, birthdate=?, notes=?, updated_at=NOW() WHERE id=?");
-            $stmt->execute([$patient_name, $species, $breed, $birthdate ?: null, $notes, $id]);
+            $stmt = $pdo->prepare("
+                UPDATE tp_patients SET 
+                    name=?, species=?, breed=?, color=?, gender=?,
+                    birth_date=?, weight=?, microchip=?, notes=?,
+                    medical_history=?, allergies=?, medications=?,
+                    updated_at=NOW()
+                WHERE id=?
+            ");
+            
+            $stmt->execute([
+                $patient_name, $species, $breed, $color, $gender,
+                $birth_date ?: null, $weight ?: null, $microchip, $notes,
+                $medical_history, $allergies, $medications, $id
+            ]);
+            
+            // Get updated patient
+            $stmt = $pdo->prepare("
+                SELECT p.*, o.first_name as owner_first_name, o.last_name as owner_last_name
+                FROM tp_patients p
+                JOIN tp_owners o ON p.owner_id = o.id
+                WHERE p.id = ?
+            ");
+            $stmt->execute([$id]);
+            $patient = $stmt->fetch();
             
             ob_end_clean();
-            json_success(["patient_id" => $id], "Patient erfolgreich aktualisiert");
+            echo json_encode([
+                'ok' => true,
+                'data' => $patient,
+                'message' => 'Patient erfolgreich aktualisiert'
+            ], JSON_UNESCAPED_UNICODE);
             break;
             
         case 'delete':
-            $id = intval($_POST['id'] ?? 0);
+            // Get input data
+            $input = $_POST;
+            if (empty($input)) {
+                $json = file_get_contents('php://input');
+                $input = json_decode($json, true) ?? [];
+            }
+            
+            $id = intval($input['id'] ?? 0);
             
             if (!$id) {
                 ob_end_clean();
-                json_error('Patient ID fehlt', 400);
+                echo json_encode(['ok' => false, 'error' => 'Patient ID fehlt'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             
-            // Delete patient
-            $stmt = $pdo->prepare("DELETE FROM patients WHERE id=?");
-            $stmt->execute([$id]);
+            // Begin transaction
+            $pdo->beginTransaction();
             
-            ob_end_clean();
-            json_success([], "Patient gelöscht");
+            try {
+                // Delete related records (appointments, treatments, notes will cascade)
+                // But let's check if there are any invoices first
+                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tp_invoices WHERE patient_id = ?");
+                $stmt->execute([$id]);
+                $result = $stmt->fetch();
+                
+                if ($result['count'] > 0) {
+                    $pdo->rollBack();
+                    ob_end_clean();
+                    echo json_encode([
+                        'ok' => false,
+                        'error' => "Patient kann nicht gelöscht werden - hat noch " . $result['count'] . " Rechnung(en)"
+                    ], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+                
+                // Delete patient (cascades to appointments, treatments, notes)
+                $stmt = $pdo->prepare("DELETE FROM tp_patients WHERE id=?");
+                $stmt->execute([$id]);
+                
+                $pdo->commit();
+                
+                ob_end_clean();
+                echo json_encode([
+                    'ok' => true,
+                    'message' => 'Patient erfolgreich gelöscht'
+                ], JSON_UNESCAPED_UNICODE);
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
             
         default:
             ob_end_clean();
-            json_error("Unbekannte Aktion: " . $action);
+            echo json_encode(['ok' => false, 'error' => "Unbekannte Aktion: " . $action], JSON_UNESCAPED_UNICODE);
     }
     
 } catch (PDOException $e) {
     error_log("Patients API PDO Error (" . $action . "): " . $e->getMessage());
     ob_end_clean();
-    json_error("Datenbankfehler: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'Datenbankfehler aufgetreten',
+        'details' => APP_DEBUG ? $e->getMessage() : null
+    ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log("Patients API Error (" . $action . "): " . $e->getMessage());
     ob_end_clean();
-    json_error("Serverfehler: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'Serverfehler aufgetreten',
+        'details' => APP_DEBUG ? $e->getMessage() : null
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 // Ensure no further output

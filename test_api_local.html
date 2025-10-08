@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tierphysio API Test - Local</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button.danger {
+            background: #e74c3c;
+        }
+        button.danger:hover {
+            background: #c0392b;
+        }
+        button.success {
+            background: #27ae60;
+        }
+        button.success:hover {
+            background: #229954;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background: #ecf0f1;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.ok {
+            background: #27ae60;
+            color: white;
+        }
+        .status.fail {
+            background: #e74c3c;
+            color: white;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐾 Tierphysio Manager API Test Suite</h1>
+    
+    <!-- Integrity Tests -->
+    <div class="test-section">
+        <h2>🔍 System Integrity Tests</h2>
+        <button onclick="testDbIntegrity()">Database Integrity Check</button>
+        <button onclick="testHttpSmoke()">HTTP Smoke Test</button>
+        <div id="integrity-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Owners API Tests -->
+    <div class="test-section">
+        <h2>👤 Owners API</h2>
+        <button onclick="testAPI('owners', 'list')">List Owners</button>
+        <button onclick="testCreateOwner()" class="success">Create Test Owner</button>
+        <div id="owners-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Patients API Tests -->
+    <div class="test-section">
+        <h2>🐕 Patients API</h2>
+        <button onclick="testAPI('patients', 'list')">List Patients</button>
+        <button onclick="showPatientForm()" class="success">Create Test Patient</button>
+        
+        <div id="patient-form" style="display:none; margin-top: 20px;">
+            <h3>New Patient Form</h3>
+            <div class="grid">
+                <div>
+                    <h4>Patient Data</h4>
+                    <div class="form-group">
+                        <label>Name*</label>
+                        <input type="text" id="patient_name" value="Test Hund">
+                    </div>
+                    <div class="form-group">
+                        <label>Species*</label>
+                        <select id="species">
+                            <option value="dog">Dog</option>
+                            <option value="cat">Cat</option>
+                            <option value="horse">Horse</option>
+                            <option value="rabbit">Rabbit</option>
+                            <option value="bird">Bird</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Breed</label>
+                        <input type="text" id="breed" value="Labrador">
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="gender">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="neutered_male">Neutered Male</option>
+                            <option value="spayed_female">Spayed Female</option>
+                            <option value="unknown">Unknown</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <h4>Owner Data (leave empty to use existing)</h4>
+                    <div class="form-group">
+                        <label>Owner ID (if existing)</label>
+                        <input type="number" id="owner_id" placeholder="Leave empty for new owner">
+                    </div>
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="owner_first_name" value="Test">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="owner_last_name" value="Owner">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" id="owner_phone" value="0171-1234567">
+                    </div>
+                </div>
+            </div>
+            <button onclick="testCreatePatient()" class="success">Create Patient</button>
+            <button onclick="document.getElementById('patient-form').style.display='none'">Cancel</button>
+        </div>
+        
+        <div id="patients-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Other APIs -->
+    <div class="test-section">
+        <h2>📋 Other APIs</h2>
+        <button onclick="testAPI('appointments', 'list')">Appointments</button>
+        <button onclick="testAPI('treatments', 'list')">Treatments</button>
+        <button onclick="testAPI('invoices', 'list')">Invoices</button>
+        <button onclick="testAPI('notes', 'list')">Notes</button>
+        <div id="other-result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/public/api';
+        
+        function showResult(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isSuccess ? 'success' : 'error');
+            element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+        
+        async function testAPI(endpoint, action) {
+            const resultId = endpoint === 'owners' ? 'owners-result' : 
+                           endpoint === 'patients' ? 'patients-result' : 'other-result';
+            
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}.php?action=${action}`);
+                const contentType = response.headers.get('content-type');
+                const text = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error(`Invalid JSON response. Content-Type: ${contentType}\nResponse preview: ${text.substring(0, 500)}`);
+                }
+                
+                const isSuccess = data.ok !== false && data.status !== 'error';
+                showResult(resultId, data, isSuccess);
+            } catch (error) {
+                showResult(resultId, `Error: ${error.message}`, false);
+            }
+        }
+        
+        async function testCreateOwner() {
+            const data = {
+                first_name: 'Test',
+                last_name: 'Besitzer_' + Date.now(),
+                phone: '0171-' + Math.floor(Math.random() * 9999999),
+                email: 'test' + Date.now() + '@example.com',
+                street: 'Teststraße',
+                house_number: '123',
+                postal_code: '12345',
+                city: 'Berlin'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/owners.php?action=create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showResult('owners-result', result, result.ok === true);
+            } catch (error) {
+                showResult('owners-result', `Error: ${error.message}`, false);
+            }
+        }
+        
+        function showPatientForm() {
+            document.getElementById('patient-form').style.display = 'block';
+        }
+        
+        async function testCreatePatient() {
+            const data = {
+                name: document.getElementById('patient_name').value,
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value,
+                gender: document.getElementById('gender').value,
+                owner_id: document.getElementById('owner_id').value || 0,
+                owner_first_name: document.getElementById('owner_first_name').value,
+                owner_last_name: document.getElementById('owner_last_name').value,
+                owner_phone: document.getElementById('owner_phone').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients.php?action=create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showResult('patients-result', result, result.ok === true);
+                
+                if (result.ok) {
+                    document.getElementById('patient-form').style.display = 'none';
+                }
+            } catch (error) {
+                showResult('patients-result', `Error: ${error.message}`, false);
+            }
+        }
+        
+        async function testDbIntegrity() {
+            try {
+                const response = await fetch('/integrity/db_check.php');
+                const data = await response.json();
+                showResult('integrity-result', data, data.ok === true);
+            } catch (error) {
+                showResult('integrity-result', `Error: ${error.message}`, false);
+            }
+        }
+        
+        async function testHttpSmoke() {
+            try {
+                const response = await fetch('/integrity/http_smoke.php');
+                const data = await response.json();
+                showResult('integrity-result', data, data.ok === true);
+            } catch (error) {
+                showResult('integrity-result', `Error: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>
