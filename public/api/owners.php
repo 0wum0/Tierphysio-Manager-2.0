@@ -28,8 +28,8 @@ try {
             // Get all owners with patient count
             $sql = "SELECT o.*, 
                     COUNT(p.id) as patient_count
-                    FROM owners o 
-                    LEFT JOIN patients p ON o.id = p.owner_id
+                    FROM tp_owners o 
+                    LEFT JOIN tp_patients p ON o.id = p.owner_id
                     GROUP BY o.id
                     ORDER BY o.last_name, o.first_name";
             
@@ -49,7 +49,7 @@ try {
             }
             
             // Get owner with patients
-            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = ?");
             $stmt->execute([$id]);
             $owner = $stmt->fetch();
             
@@ -59,7 +59,7 @@ try {
             }
             
             // Get owner's patients
-            $stmt = $pdo->prepare("SELECT * FROM patients WHERE owner_id = ? ORDER BY name");
+            $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE owner_id = ? ORDER BY name");
             $stmt->execute([$id]);
             $owner['patients'] = $stmt->fetchAll();
             
@@ -73,7 +73,11 @@ try {
             $last_name = trim($_POST['last_name'] ?? '');
             $phone = trim($_POST['phone'] ?? '');
             $email = trim($_POST['email'] ?? '');
-            $address = trim($_POST['address'] ?? '');
+            $street = trim($_POST['street'] ?? '');
+            $house_number = trim($_POST['house_number'] ?? '');
+            $postal_code = trim($_POST['postal_code'] ?? '');
+            $city = trim($_POST['city'] ?? '');
+            $country = trim($_POST['country'] ?? 'Deutschland');
             
             // Validate required fields
             if (!$first_name || !$last_name) {
@@ -82,26 +86,29 @@ try {
             }
             
             // Check if owner already exists
-            $stmt = $pdo->prepare("SELECT id FROM owners WHERE first_name=? AND last_name=? LIMIT 1");
-            $stmt->execute([$first_name, $last_name]);
+            $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE first_name=? AND last_name=? AND (phone=? OR email=?) LIMIT 1");
+            $stmt->execute([$first_name, $last_name, $phone ?: '', $email ?: '']);
             
             if ($stmt->fetch()) {
                 ob_end_clean();
-                json_error("Ein Besitzer mit diesem Namen existiert bereits");
+                json_error("Ein Besitzer mit diesem Namen existiert bereits", 409);
             }
             
+            // Generate customer number
+            $customer_number = 'O' . date('ymd') . rand(1000, 9999);
+            
             // Create owner
-            $stmt = $pdo->prepare("INSERT INTO owners (first_name, last_name, phone, email, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$first_name, $last_name, $phone, $email, $address]);
+            $stmt = $pdo->prepare("INSERT INTO tp_owners (customer_number, first_name, last_name, phone, email, street, house_number, postal_code, city, country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$customer_number, $first_name, $last_name, $phone, $email, $street, $house_number, $postal_code, $city, $country]);
             $owner_id = $pdo->lastInsertId();
             
             // Get created owner
-            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = ?");
             $stmt->execute([$owner_id]);
             $owner = $stmt->fetch();
             
             ob_end_clean();
-            json_success($owner, "Besitzer erfolgreich angelegt");
+            json_success($owner, "Besitzer erfolgreich angelegt", 201);
             break;
             
         case 'update':
@@ -117,19 +124,23 @@ try {
             $last_name = trim($_POST['last_name'] ?? '');
             $phone = trim($_POST['phone'] ?? '');
             $email = trim($_POST['email'] ?? '');
-            $address = trim($_POST['address'] ?? '');
+            $street = trim($_POST['street'] ?? '');
+            $house_number = trim($_POST['house_number'] ?? '');
+            $postal_code = trim($_POST['postal_code'] ?? '');
+            $city = trim($_POST['city'] ?? '');
+            $country = trim($_POST['country'] ?? 'Deutschland');
             
             if (!$first_name || !$last_name) {
                 ob_end_clean();
-                json_error("Vor- und Nachname sind erforderlich");
+                json_error("Vor- und Nachname sind erforderlich", 400);
             }
             
             // Update owner
-            $stmt = $pdo->prepare("UPDATE owners SET first_name=?, last_name=?, phone=?, email=?, address=?, updated_at=NOW() WHERE id=?");
-            $stmt->execute([$first_name, $last_name, $phone, $email, $address, $id]);
+            $stmt = $pdo->prepare("UPDATE tp_owners SET first_name=?, last_name=?, phone=?, email=?, street=?, house_number=?, postal_code=?, city=?, country=?, updated_at=NOW() WHERE id=?");
+            $stmt->execute([$first_name, $last_name, $phone, $email, $street, $house_number, $postal_code, $city, $country, $id]);
             
             // Get updated owner
-            $stmt = $pdo->prepare("SELECT * FROM owners WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = ?");
             $stmt->execute([$id]);
             $owner = $stmt->fetch();
             
@@ -146,17 +157,17 @@ try {
             }
             
             // Check if owner has patients
-            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM patients WHERE owner_id = ?");
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tp_patients WHERE owner_id = ?");
             $stmt->execute([$id]);
             $result = $stmt->fetch();
             
             if ($result['count'] > 0) {
                 ob_end_clean();
-                json_error("Besitzer kann nicht gelöscht werden - hat noch " . $result['count'] . " Patient(en)");
+                json_error("Besitzer kann nicht gelöscht werden - hat noch " . $result['count'] . " Patient(en)", 409);
             }
             
             // Delete owner
-            $stmt = $pdo->prepare("DELETE FROM owners WHERE id=?");
+            $stmt = $pdo->prepare("DELETE FROM tp_owners WHERE id=?");
             $stmt->execute([$id]);
             
             ob_end_clean();
@@ -165,7 +176,7 @@ try {
             
         default:
             ob_end_clean();
-            json_error("Unbekannte Aktion: " . $action);
+            json_error("Unbekannte Aktion: " . $action, 400);
     }
     
 } catch (PDOException $e) {

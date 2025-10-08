@@ -433,11 +433,18 @@ function patientsManager() {
                 });
 
                 const response = await fetch(`/public/api/patients.php?${params}`);
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
+                
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    // Data is directly in data.data array
-                    this.patients = data.data || [];
+                    // Data is in data.data.items array for list action
+                    this.patients = data.data?.items || data.data || [];
                     
                     // Animate cards on load
                     this.$nextTick(() => {
@@ -464,6 +471,14 @@ function patientsManager() {
         async loadOwners() {
             try {
                 const response = await fetch('/public/api/owners.php?action=list');
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Server returned non-JSON response');
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -558,7 +573,7 @@ function patientsManager() {
                 formData.append('patient_name', this.currentPatient.name);
                 formData.append('species', this.currentPatient.species);
                 formData.append('breed', this.currentPatient.breed);
-                formData.append('birthdate', this.currentPatient.birth_date);
+                formData.append('birth_date', this.currentPatient.birth_date);
                 formData.append('gender', this.currentPatient.gender);
                 formData.append('weight', this.currentPatient.weight);
                 formData.append('microchip', this.currentPatient.microchip);
@@ -580,22 +595,27 @@ function patientsManager() {
                     }
                     
                     // Add new owner fields
-                    formData.append('owner_salutation', this.currentOwner.salutation);
-                    formData.append('owner_first_name', this.currentOwner.first_name);
-                    formData.append('owner_last_name', this.currentOwner.last_name);
-                    formData.append('owner_phone', this.currentOwner.phone);
-                    formData.append('owner_mobile', this.currentOwner.mobile);
-                    formData.append('owner_email', this.currentOwner.email);
-                    formData.append('owner_street', this.currentOwner.street);
-                    formData.append('owner_house_number', this.currentOwner.house_number);
-                    formData.append('owner_postal_code', this.currentOwner.postal_code);
-                    formData.append('owner_city', this.currentOwner.city);
+                    formData.append('owner_first', this.currentOwner.first_name);
+                    formData.append('owner_last', this.currentOwner.last_name);
+                    formData.append('phone', this.currentOwner.phone);
+                    formData.append('email', this.currentOwner.email);
+                    formData.append('street', this.currentOwner.street);
+                    formData.append('house_number', this.currentOwner.house_number);
+                    formData.append('postal_code', this.currentOwner.postal_code);
+                    formData.append('city', this.currentOwner.city);
+                    formData.append('country', 'Deutschland');
                 }
 
                 const response = await fetch('/public/api/patients.php?action=' + action, {
                     method: 'POST',
                     body: formData
                 });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
 
                 const data = await response.json();
                 
@@ -629,6 +649,12 @@ function patientsManager() {
                     method: 'POST',
                     body: formData
                 });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
 
                 const data = await response.json();
                 

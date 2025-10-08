@@ -26,14 +26,10 @@ try {
     switch ($action) {
         case 'list':
             // Get all patients with owner information
-            $sql = "SELECT p.*, 
-                    o.first_name, 
-                    o.last_name,
-                    o.phone,
-                    o.email,
-                    o.address
-                    FROM patients p 
-                    LEFT JOIN owners o ON p.owner_id = o.id 
+            $sql = "SELECT p.id, p.patient_number, p.name, p.species, p.breed, p.gender, p.birth_date,
+                    o.first_name, o.last_name, o.customer_number, o.phone, o.email
+                    FROM tp_patients p 
+                    LEFT JOIN tp_owners o ON p.owner_id = o.id 
                     ORDER BY p.id DESC";
             
             $stmt = $pdo->query($sql);
@@ -41,7 +37,7 @@ try {
             
             // Clean output buffer before sending response
             ob_end_clean();
-            json_success($patients);
+            json_success(['items' => $patients]);
             break;
             
         case 'get':
@@ -53,13 +49,11 @@ try {
             }
             
             $sql = "SELECT p.*, 
-                    o.first_name, 
-                    o.last_name,
-                    o.phone,
-                    o.email,
-                    o.address
-                    FROM patients p 
-                    LEFT JOIN owners o ON p.owner_id = o.id 
+                    o.first_name, o.last_name, o.customer_number,
+                    o.email, o.phone,
+                    o.street, o.house_number, o.postal_code, o.city, o.country
+                    FROM tp_patients p 
+                    LEFT JOIN tp_owners o ON p.owner_id = o.id 
                     WHERE p.id = :id";
             
             $stmt = $pdo->prepare($sql);
@@ -81,44 +75,70 @@ try {
             $owner_last = trim($_POST['owner_last_name'] ?? $_POST['owner_last'] ?? '');
             $phone = trim($_POST['owner_phone'] ?? $_POST['phone'] ?? '');
             $email = trim($_POST['owner_email'] ?? $_POST['email'] ?? '');
-            $address = trim($_POST['owner_address'] ?? $_POST['address'] ?? '');
+            $street = trim($_POST['street'] ?? '');
+            $house_number = trim($_POST['house_number'] ?? '');
+            $postal_code = trim($_POST['postal_code'] ?? '');
+            $city = trim($_POST['city'] ?? '');
+            $country = trim($_POST['country'] ?? 'Deutschland');
             
             $patient_name = trim($_POST['patient_name'] ?? $_POST['name'] ?? '');
-            $species = trim($_POST['species'] ?? '');
+            $species = trim($_POST['species'] ?? 'other');
             $breed = trim($_POST['breed'] ?? '');
-            $birthdate = trim($_POST['birthdate'] ?? $_POST['birth_date'] ?? '');
+            $color = trim($_POST['color'] ?? '');
+            $gender = trim($_POST['gender'] ?? 'unknown');
+            $birth_date = trim($_POST['birth_date'] ?? '');
             $notes = trim($_POST['notes'] ?? '');
             
             // Validate required fields
-            if (!$patient_name || !$owner_first) {
+            if (!$patient_name || !$owner_first || !$species) {
                 ob_end_clean();
-                json_error("Pflichtfelder fehlen (Patient Name und Besitzer Vorname sind erforderlich)");
+                json_error("Pflichtfelder fehlen (Patient Name, Species und Besitzer Vorname sind erforderlich)", 400);
+            }
+            
+            // Validate enums
+            $valid_species = ['dog', 'cat', 'horse', 'rabbit', 'bird', 'reptile', 'other'];
+            $valid_genders = ['male', 'female', 'neutered_male', 'spayed_female', 'unknown'];
+            
+            if (!in_array($species, $valid_species)) {
+                ob_end_clean();
+                json_error("Ungültige Species: $species", 400);
+            }
+            
+            if (!in_array($gender, $valid_genders)) {
+                ob_end_clean();
+                json_error("Ungültiges Geschlecht: $gender", 400);
             }
             
             // Check if owner exists or create new one
-            $stmt = $pdo->prepare("SELECT id FROM owners WHERE first_name=? AND last_name=? LIMIT 1");
-            $stmt->execute([$owner_first, $owner_last]);
+            $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE first_name=? AND last_name=? AND (phone=? OR email=?) LIMIT 1");
+            $stmt->execute([$owner_first, $owner_last, $phone ?: '', $email ?: '']);
             $owner = $stmt->fetch();
             
             if (!$owner) {
+                // Generate customer number
+                $customer_number = 'O' . date('ymd') . rand(1000, 9999);
+                
                 // Create new owner
-                $stmt = $pdo->prepare("INSERT INTO owners (first_name, last_name, phone, email, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-                $stmt->execute([$owner_first, $owner_last, $phone, $email, $address]);
+                $stmt = $pdo->prepare("INSERT INTO tp_owners (customer_number, first_name, last_name, phone, email, street, house_number, postal_code, city, country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->execute([$customer_number, $owner_first, $owner_last, $phone, $email, $street, $house_number, $postal_code, $city, $country]);
                 $owner_id = $pdo->lastInsertId();
             } else {
                 $owner_id = $owner['id'];
             }
             
+            // Generate patient number
+            $patient_number = 'P' . date('ymd') . rand(1000, 9999);
+            
             // Create patient
-            $stmt = $pdo->prepare("INSERT INTO patients (name, species, breed, birthdate, owner_id, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$patient_name, $species, $breed, $birthdate ?: null, $owner_id, $notes]);
+            $stmt = $pdo->prepare("INSERT INTO tp_patients (patient_number, name, species, breed, color, gender, birth_date, owner_id, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$patient_number, $patient_name, $species, $breed, $color, $gender, $birth_date ?: null, $owner_id, $notes]);
             $patient_id = $pdo->lastInsertId();
             
             ob_end_clean();
             json_success([
                 "patient_id" => $patient_id,
                 "owner_id" => $owner_id
-            ], "Patient erfolgreich angelegt");
+            ], "Patient erfolgreich angelegt", 201);
             break;
             
         case 'update':
@@ -133,17 +153,36 @@ try {
             $patient_name = trim($_POST['patient_name'] ?? $_POST['name'] ?? '');
             $species = trim($_POST['species'] ?? '');
             $breed = trim($_POST['breed'] ?? '');
-            $birthdate = trim($_POST['birthdate'] ?? $_POST['birth_date'] ?? '');
+            $color = trim($_POST['color'] ?? '');
+            $gender = trim($_POST['gender'] ?? 'unknown');
+            $birth_date = trim($_POST['birth_date'] ?? '');
             $notes = trim($_POST['notes'] ?? '');
             
             if (!$patient_name) {
                 ob_end_clean();
-                json_error("Patient Name ist erforderlich");
+                json_error("Patient Name ist erforderlich", 400);
+            }
+            
+            // Validate enums if provided
+            if ($species) {
+                $valid_species = ['dog', 'cat', 'horse', 'rabbit', 'bird', 'reptile', 'other'];
+                if (!in_array($species, $valid_species)) {
+                    ob_end_clean();
+                    json_error("Ungültige Species: $species", 400);
+                }
+            }
+            
+            if ($gender) {
+                $valid_genders = ['male', 'female', 'neutered_male', 'spayed_female', 'unknown'];
+                if (!in_array($gender, $valid_genders)) {
+                    ob_end_clean();
+                    json_error("Ungültiges Geschlecht: $gender", 400);
+                }
             }
             
             // Update patient
-            $stmt = $pdo->prepare("UPDATE patients SET name=?, species=?, breed=?, birthdate=?, notes=?, updated_at=NOW() WHERE id=?");
-            $stmt->execute([$patient_name, $species, $breed, $birthdate ?: null, $notes, $id]);
+            $stmt = $pdo->prepare("UPDATE tp_patients SET name=?, species=?, breed=?, color=?, gender=?, birth_date=?, notes=?, updated_at=NOW() WHERE id=?");
+            $stmt->execute([$patient_name, $species, $breed, $color, $gender, $birth_date ?: null, $notes, $id]);
             
             ob_end_clean();
             json_success(["patient_id" => $id], "Patient erfolgreich aktualisiert");
@@ -158,7 +197,7 @@ try {
             }
             
             // Delete patient
-            $stmt = $pdo->prepare("DELETE FROM patients WHERE id=?");
+            $stmt = $pdo->prepare("DELETE FROM tp_patients WHERE id=?");
             $stmt->execute([$id]);
             
             ob_end_clean();
@@ -167,7 +206,7 @@ try {
             
         default:
             ob_end_clean();
-            json_error("Unbekannte Aktion: " . $action);
+            json_error("Unbekannte Aktion: " . $action, 400);
     }
     
 } catch (PDOException $e) {

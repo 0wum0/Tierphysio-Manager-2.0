@@ -7,9 +7,9 @@
 /**
  * Send JSON success response
  */
-function json_success($data = [], $message = '') {
+function json_success($data = [], $message = 'OK', $code = 200) {
     header('Content-Type: application/json; charset=utf-8');
-    http_response_code(200);
+    http_response_code($code);
     
     echo json_encode([
         'status' => 'success',
