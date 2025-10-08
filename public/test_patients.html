@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients Module Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-purple-600">Patients Module Test Suite</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
+            <div class="space-y-4">
+                <button onclick="testIntegrity()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    Run Integrity Check
+                </button>
+                <button onclick="testList()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Test List Patients
+                </button>
+                <button onclick="testCreate()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Test Create Patient
+                </button>
+                <button onclick="testOwnersList()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                    Test List Owners
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Test Results</h2>
+            <div id="results" class="space-y-4">
+                <p class="text-gray-500">Click a test button to see results...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiBase = '/public/api';
+        
+        function displayResult(title, data, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const resultClass = isError ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200';
+            const titleClass = isError ? 'text-red-800' : 'text-green-800';
+            
+            resultsDiv.innerHTML = `
+                <div class="border rounded-lg p-4 ${resultClass}">
+                    <h3 class="font-semibold ${titleClass} mb-2">${title}</h3>
+                    <pre class="text-sm overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+        
+        async function testIntegrity() {
+            try {
+                const response = await fetch(`${apiBase}/integrity_patients.php`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayResult('✅ Integrity Check Passed', data.data);
+                } else {
+                    displayResult('❌ Integrity Check Failed', data, true);
+                }
+            } catch (error) {
+                displayResult('❌ Error running integrity check', {error: error.message}, true);
+            }
+        }
+        
+        async function testList() {
+            try {
+                const response = await fetch(`${apiBase}/patients.php?action=list`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayResult('✅ List Patients Success', data.data);
+                } else {
+                    displayResult('❌ List Patients Failed', data, true);
+                }
+            } catch (error) {
+                displayResult('❌ Error listing patients', {error: error.message}, true);
+            }
+        }
+        
+        async function testCreate() {
+            try {
+                const formData = new FormData();
+                formData.append('name', 'Test Patient ' + Date.now());
+                formData.append('species', 'dog');
+                formData.append('breed', 'Labrador');
+                formData.append('owner_first_name', 'Test');
+                formData.append('owner_last_name', 'Owner ' + Date.now());
+                formData.append('owner_phone', '+49 123 ' + Math.floor(Math.random() * 1000000));
+                formData.append('owner_email', 'test' + Date.now() + '@example.com');
+                
+                const response = await fetch(`${apiBase}/patients.php?action=create`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayResult('✅ Create Patient Success', data.data);
+                    
+                    // Optionally delete the test patient
+                    if (data.data.patient_id) {
+                        setTimeout(async () => {
+                            const deleteForm = new FormData();
+                            deleteForm.append('id', data.data.patient_id);
+                            await fetch(`${apiBase}/patients.php?action=delete`, {
+                                method: 'POST',
+                                body: deleteForm
+                            });
+                        }, 5000);
+                    }
+                } else {
+                    displayResult('❌ Create Patient Failed', data, true);
+                }
+            } catch (error) {
+                displayResult('❌ Error creating patient', {error: error.message}, true);
+            }
+        }
+        
+        async function testOwnersList() {
+            try {
+                const response = await fetch(`${apiBase}/owners.php?action=list`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayResult('✅ List Owners Success', data.data);
+                } else {
+                    displayResult('❌ List Owners Failed', data, true);
+                }
+            } catch (error) {
+                displayResult('❌ Error listing owners', {error: error.message}, true);
+            }
+        }
+        
+        // Auto-run integrity check on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testIntegrity, 500);
+        });
+    </script>
+</body>
+</html>

@@ -147,32 +147,51 @@
             </div>
 
             <!-- Modal Panel -->
-            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-                <form @submit.prevent="savePatient()">
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <form @submit.prevent="savePatient()" id="patientForm">
                     <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" x-text="modalTitle"></h3>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-6" x-text="modalTitle"></h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Tab Navigation -->
+                        <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                                <button type="button"
+                                        @click="activeTab = 'patient'"
+                                        :class="activeTab === 'patient' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm">
+                                    Patientendaten
+                                </button>
+                                <button type="button"
+                                        @click="activeTab = 'owner'"
+                                        :class="activeTab === 'owner' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm">
+                                    Besitzerdaten
+                                </button>
+                            </nav>
+                        </div>
+                        
+                        <!-- Patient Tab -->
+                        <div x-show="activeTab === 'patient'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Name -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                                 <input type="text" x-model="currentPatient.name" required
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                             </div>
 
                             <!-- Species -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tierart *</label>
                                 <select x-model="currentPatient.species" required
-                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                                     <option value="">Bitte wählen</option>
-                                    <option value="dog">Hund</option>
-                                    <option value="cat">Katze</option>
-                                    <option value="horse">Pferd</option>
-                                    <option value="rabbit">Hase</option>
-                                    <option value="bird">Vogel</option>
-                                    <option value="reptile">Reptil</option>
-                                    <option value="other">Andere</option>
+                                    <option value="dog">🐕 Hund</option>
+                                    <option value="cat">🐈 Katze</option>
+                                    <option value="horse">🐴 Pferd</option>
+                                    <option value="rabbit">🐰 Hase</option>
+                                    <option value="bird">🦜 Vogel</option>
+                                    <option value="reptile">🦎 Reptil</option>
+                                    <option value="other">🐾 Andere</option>
                                 </select>
                             </div>
 
@@ -180,33 +199,163 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rasse</label>
                                 <input type="text" x-model="currentPatient.breed"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                             </div>
 
                             <!-- Birth Date -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Geburtsdatum</label>
                                 <input type="date" x-model="currentPatient.birth_date"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                             </div>
 
-                            <!-- Owner -->
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Besitzer *</label>
-                                <select x-model="currentPatient.owner_id" required
-                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                    <option value="">Bitte wählen</option>
-                                    <template x-for="owner in owners" :key="owner.id">
-                                        <option :value="owner.id" x-text="owner.first_name + ' ' + owner.last_name"></option>
-                                    </template>
+                            <!-- Gender -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Geschlecht</label>
+                                <select x-model="currentPatient.gender"
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                    <option value="unknown">Unbekannt</option>
+                                    <option value="male">Männlich</option>
+                                    <option value="female">Weiblich</option>
+                                    <option value="neutered_male">Kastriert (männlich)</option>
+                                    <option value="spayed_female">Kastriert (weiblich)</option>
                                 </select>
+                            </div>
+
+                            <!-- Weight -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gewicht (kg)</label>
+                                <input type="number" step="0.1" x-model="currentPatient.weight"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                            </div>
+
+                            <!-- Microchip -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chip-Nummer</label>
+                                <input type="text" x-model="currentPatient.microchip"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                            </div>
+
+                            <!-- Color -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farbe</label>
+                                <input type="text" x-model="currentPatient.color"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                             </div>
 
                             <!-- Notes -->
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notizen</label>
                                 <textarea x-model="currentPatient.notes" rows="3"
-                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Owner Tab -->
+                        <div x-show="activeTab === 'owner'" class="space-y-4">
+                            <!-- Owner Selection or New -->
+                            <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 mb-4">
+                                <label class="flex items-center space-x-3">
+                                    <input type="radio" x-model="ownerMode" value="existing" class="text-purple-600 focus:ring-purple-500">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Bestehenden Besitzer auswählen</span>
+                                </label>
+                                <label class="flex items-center space-x-3 mt-2">
+                                    <input type="radio" x-model="ownerMode" value="new" class="text-purple-600 focus:ring-purple-500">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Neuen Besitzer anlegen</span>
+                                </label>
+                            </div>
+
+                            <!-- Existing Owner Selection -->
+                            <div x-show="ownerMode === 'existing'" class="transition-all duration-200">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Besitzer auswählen *</label>
+                                <select x-model="currentPatient.owner_id" :required="ownerMode === 'existing'"
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                    <option value="">Bitte wählen</option>
+                                    <template x-for="owner in owners" :key="owner.id">
+                                        <option :value="owner.id" x-text="`${owner.first_name} ${owner.last_name} (${owner.customer_number || 'K00000'})`"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- New Owner Form -->
+                            <div x-show="ownerMode === 'new'" class="grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-200">
+                                <!-- Salutation -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anrede</label>
+                                    <select x-model="currentOwner.salutation"
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                        <option value="Herr">Herr</option>
+                                        <option value="Frau">Frau</option>
+                                        <option value="Divers">Divers</option>
+                                        <option value="Firma">Firma</option>
+                                    </select>
+                                </div>
+
+                                <!-- Empty space for layout -->
+                                <div></div>
+
+                                <!-- First Name -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vorname *</label>
+                                    <input type="text" x-model="currentOwner.first_name" :required="ownerMode === 'new'"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Last Name -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nachname *</label>
+                                    <input type="text" x-model="currentOwner.last_name" :required="ownerMode === 'new'"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Phone -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
+                                    <input type="tel" x-model="currentOwner.phone"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Mobile -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mobil</label>
+                                    <input type="tel" x-model="currentOwner.mobile"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Email -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-Mail</label>
+                                    <input type="email" x-model="currentOwner.email"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Street -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Straße</label>
+                                    <input type="text" x-model="currentOwner.street"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- House Number -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hausnummer</label>
+                                    <input type="text" x-model="currentOwner.house_number"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- Postal Code -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PLZ</label>
+                                    <input type="text" x-model="currentOwner.postal_code"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
+
+                                <!-- City -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stadt</label>
+                                    <input type="text" x-model="currentOwner.city"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -238,50 +387,74 @@ function patientsManager() {
         searchQuery: '',
         speciesFilter: '',
         searchTimeout: null,
+        activeTab: 'patient',
+        ownerMode: 'existing',
         currentPatient: {
             id: null,
             name: '',
             species: '',
             breed: '',
             birth_date: '',
+            gender: 'unknown',
+            weight: '',
+            microchip: '',
+            color: '',
             owner_id: '',
             notes: ''
+        },
+        currentOwner: {
+            salutation: 'Herr',
+            first_name: '',
+            last_name: '',
+            phone: '',
+            mobile: '',
+            email: '',
+            street: '',
+            house_number: '',
+            postal_code: '',
+            city: ''
         },
 
         async init() {
             await this.loadOwners();
             await this.loadPatients();
+            
+            // Get CSRF token if needed
+            this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         },
 
         async loadPatients() {
             this.loading = true;
             try {
                 const params = new URLSearchParams({
-                    action: 'get_all',
-                    search: this.searchQuery,
+                    action: 'list',
+                    q: this.searchQuery,
                     species: this.speciesFilter
                 });
 
-                const response = await fetch(`/public/api_patients.php?${params}`);
+                const response = await fetch(`/public/api/patients.php?${params}`);
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    this.patients = data.data;
+                    this.patients = data.data?.patients || [];
                     
                     // Animate cards on load
                     this.$nextTick(() => {
-                        anime({
-                            targets: '.grid > div',
-                            translateY: [20, 0],
-                            opacity: [0, 1],
-                            delay: anime.stagger(100),
-                            duration: 600,
-                            easing: 'easeOutQuad'
-                        });
+                        if (typeof anime !== 'undefined') {
+                            anime({
+                                targets: '.grid > div',
+                                translateY: [20, 0],
+                                opacity: [0, 1],
+                                delay: anime.stagger(100),
+                                duration: 600,
+                                easing: 'easeOutQuad'
+                            });
+                        }
                     });
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Patienten:', error);
+                this.showNotification('Fehler beim Laden der Patienten', 'error');
             } finally {
                 this.loading = false;
             }
@@ -289,11 +462,11 @@ function patientsManager() {
 
         async loadOwners() {
             try {
-                const response = await fetch('/public/owners.php?action=get_all');
+                const response = await fetch('/public/api/owners.php?action=list');
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    this.owners = data.data;
+                    this.owners = data.data?.owners || [];
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Besitzer:', error);
@@ -309,26 +482,50 @@ function patientsManager() {
 
         openCreateModal() {
             this.modalTitle = 'Neuer Patient';
+            this.activeTab = 'patient';
+            this.ownerMode = 'existing';
             this.currentPatient = {
                 id: null,
                 name: '',
                 species: '',
                 breed: '',
                 birth_date: '',
+                gender: 'unknown',
+                weight: '',
+                microchip: '',
+                color: '',
                 owner_id: '',
                 notes: ''
+            };
+            this.currentOwner = {
+                salutation: 'Herr',
+                first_name: '',
+                last_name: '',
+                phone: '',
+                mobile: '',
+                email: '',
+                street: '',
+                house_number: '',
+                postal_code: '',
+                city: ''
             };
             this.showModal = true;
         },
 
         editPatient(patient) {
             this.modalTitle = 'Patient bearbeiten';
+            this.activeTab = 'patient';
+            this.ownerMode = 'existing';
             this.currentPatient = {
                 id: patient.id,
                 name: patient.name,
                 species: patient.species,
                 breed: patient.breed || '',
                 birth_date: patient.birth_date || '',
+                gender: patient.gender || 'unknown',
+                weight: patient.weight || '',
+                microchip: patient.microchip || '',
+                color: patient.color || '',
                 owner_id: patient.owner_id,
                 notes: patient.notes || ''
             };
@@ -337,12 +534,14 @@ function patientsManager() {
 
         closeModal() {
             this.showModal = false;
-            anime({
-                targets: '.modal',
-                opacity: [1, 0],
-                duration: 300,
-                easing: 'easeOutQuad'
-            });
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: '.modal',
+                    opacity: [1, 0],
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
+            }
         },
 
         async savePatient() {
@@ -350,7 +549,12 @@ function patientsManager() {
                 const formData = new FormData();
                 const action = this.currentPatient.id ? 'update' : 'create';
                 
-                formData.append('action', action);
+                // Add CSRF token
+                if (this.csrfToken) {
+                    formData.append('_csrf_token', this.csrfToken);
+                }
+                
+                // Add patient data
                 if (this.currentPatient.id) {
                     formData.append('id', this.currentPatient.id);
                 }
@@ -358,10 +562,40 @@ function patientsManager() {
                 formData.append('species', this.currentPatient.species);
                 formData.append('breed', this.currentPatient.breed);
                 formData.append('birth_date', this.currentPatient.birth_date);
-                formData.append('owner_id', this.currentPatient.owner_id);
+                formData.append('gender', this.currentPatient.gender);
+                formData.append('weight', this.currentPatient.weight);
+                formData.append('microchip', this.currentPatient.microchip);
+                formData.append('color', this.currentPatient.color);
                 formData.append('notes', this.currentPatient.notes);
+                
+                // Add owner data based on mode
+                if (this.ownerMode === 'existing') {
+                    if (!this.currentPatient.owner_id) {
+                        this.showNotification('Bitte wählen Sie einen Besitzer aus', 'error');
+                        return;
+                    }
+                    formData.append('owner_id', this.currentPatient.owner_id);
+                } else if (this.ownerMode === 'new') {
+                    // Validate new owner data
+                    if (!this.currentOwner.first_name || !this.currentOwner.last_name) {
+                        this.showNotification('Bitte geben Sie Vor- und Nachname des Besitzers ein', 'error');
+                        return;
+                    }
+                    
+                    // Add new owner fields
+                    formData.append('owner_salutation', this.currentOwner.salutation);
+                    formData.append('owner_first_name', this.currentOwner.first_name);
+                    formData.append('owner_last_name', this.currentOwner.last_name);
+                    formData.append('owner_phone', this.currentOwner.phone);
+                    formData.append('owner_mobile', this.currentOwner.mobile);
+                    formData.append('owner_email', this.currentOwner.email);
+                    formData.append('owner_street', this.currentOwner.street);
+                    formData.append('owner_house_number', this.currentOwner.house_number);
+                    formData.append('owner_postal_code', this.currentOwner.postal_code);
+                    formData.append('owner_city', this.currentOwner.city);
+                }
 
-                const response = await fetch('/public/api_patients.php?action=' + action, {
+                const response = await fetch('/public/api/patients.php?action=' + action, {
                     method: 'POST',
                     body: formData
                 });
@@ -370,17 +604,18 @@ function patientsManager() {
                 
                 if (data.status === 'success') {
                     this.closeModal();
+                    await this.loadOwners(); // Reload owners if new one was created
                     await this.loadPatients();
                     
                     // Success animation
-                    const message = this.currentPatient.id ? 'Patient aktualisiert!' : 'Patient hinzugefügt!';
+                    const message = this.currentPatient.id ? 'Patient erfolgreich aktualisiert!' : 'Patient erfolgreich angelegt!';
                     this.showNotification(message, 'success');
                 } else {
                     this.showNotification(data.message || 'Fehler beim Speichern', 'error');
                 }
             } catch (error) {
                 console.error('Fehler beim Speichern:', error);
-                this.showNotification('Fehler beim Speichern', 'error');
+                this.showNotification('Fehler beim Speichern des Patienten', 'error');
             }
         },
 
@@ -392,8 +627,13 @@ function patientsManager() {
             try {
                 const formData = new FormData();
                 formData.append('id', patient.id);
+                
+                // Add CSRF token
+                if (this.csrfToken) {
+                    formData.append('_csrf_token', this.csrfToken);
+                }
 
-                const response = await fetch('/public/api_patients.php?action=delete', {
+                const response = await fetch('/public/api/patients.php?action=delete', {
                     method: 'POST',
                     body: formData
                 });
@@ -402,7 +642,7 @@ function patientsManager() {
                 
                 if (data.status === 'success') {
                     await this.loadPatients();
-                    this.showNotification('Patient gelöscht!', 'success');
+                    this.showNotification('Patient erfolgreich gelöscht!', 'success');
                 } else {
                     this.showNotification(data.message || 'Fehler beim Löschen', 'error');
                 }
@@ -447,36 +687,48 @@ function patientsManager() {
             const birth = new Date(birthDate);
             const today = new Date();
             const age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                return (age - 1) + (age === 1 ? ' Jahr' : ' Jahre');
+            }
+            
             return age + (age === 1 ? ' Jahr' : ' Jahre');
         },
 
         showNotification(message, type) {
-            // Temporäre Notification-Anzeige
+            // Create notification element
             const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 shadow-lg ${
                 type === 'success' ? 'bg-green-500' : 'bg-red-500'
             }`;
             notification.textContent = message;
             document.body.appendChild(notification);
 
-            anime({
-                targets: notification,
-                translateX: [100, 0],
-                opacity: [0, 1],
-                duration: 300,
-                easing: 'easeOutQuad'
-            });
-
-            setTimeout(() => {
+            // Animate if anime.js is available
+            if (typeof anime !== 'undefined') {
                 anime({
                     targets: notification,
-                    translateX: [0, 100],
-                    opacity: [1, 0],
+                    translateX: [100, 0],
+                    opacity: [0, 1],
                     duration: 300,
-                    easing: 'easeInQuad',
-                    complete: () => notification.remove()
+                    easing: 'easeOutQuad'
                 });
-            }, 3000);
+
+                setTimeout(() => {
+                    anime({
+                        targets: notification,
+                        translateX: [0, 100],
+                        opacity: [1, 0],
+                        duration: 300,
+                        easing: 'easeInQuad',
+                        complete: () => notification.remove()
+                    });
+                }, 3000);
+            } else {
+                // Fallback without animation
+                setTimeout(() => notification.remove(), 3000);
+            }
         }
     };
 }

@@ -140,8 +140,88 @@ try {
             // Get POST data
             $data = get_post_data();
             
-            // Validate required fields
-            validate_required($data, ['owner_id', 'name', 'species']);
+            // Validate required fields for patient
+            validate_required($data, ['name', 'species']);
+            
+            // Handle owner creation or selection
+            $ownerId = null;
+            
+            // Check if owner_id is provided
+            if (!empty($data['owner_id'])) {
+                $ownerId = intval($data['owner_id']);
+            } else {
+                // Check if owner data is provided for new owner creation
+                if (!empty($data['owner_first_name']) && !empty($data['owner_last_name'])) {
+                    // Check if owner already exists with same name and phone
+                    $checkSql = "SELECT id FROM tp_owners WHERE first_name = :first_name 
+                                AND last_name = :last_name";
+                    $checkParams = [
+                        'first_name' => sanitize_input($data['owner_first_name']),
+                        'last_name' => sanitize_input($data['owner_last_name'])
+                    ];
+                    
+                    // Add phone to check if provided
+                    if (!empty($data['owner_phone'])) {
+                        $checkSql .= " AND (phone = :phone OR mobile = :phone)";
+                        $checkParams['phone'] = sanitize_input($data['owner_phone']);
+                    }
+                    
+                    $stmt = $pdo->prepare($checkSql);
+                    $stmt->execute($checkParams);
+                    $existingOwner = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($existingOwner) {
+                        // Use existing owner
+                        $ownerId = $existingOwner['id'];
+                    } else {
+                        // Create new owner
+                        // Generate customer number
+                        $stmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(customer_number, 2) AS UNSIGNED)) as max_num FROM tp_owners WHERE customer_number LIKE 'K%'");
+                        $maxNum = $stmt->fetch(PDO::FETCH_ASSOC)['max_num'] ?? 0;
+                        $customerNumber = 'K' . str_pad($maxNum + 1, 5, '0', STR_PAD_LEFT);
+                        
+                        $ownerData = [
+                            'customer_number' => $customerNumber,
+                            'salutation' => sanitize_input($data['owner_salutation'] ?? 'Herr'),
+                            'first_name' => sanitize_input($data['owner_first_name']),
+                            'last_name' => sanitize_input($data['owner_last_name']),
+                            'email' => filter_var($data['owner_email'] ?? '', FILTER_VALIDATE_EMAIL) ?: null,
+                            'phone' => sanitize_input($data['owner_phone'] ?? null),
+                            'mobile' => sanitize_input($data['owner_mobile'] ?? null),
+                            'street' => sanitize_input($data['owner_street'] ?? null),
+                            'house_number' => sanitize_input($data['owner_house_number'] ?? null),
+                            'postal_code' => sanitize_input($data['owner_postal_code'] ?? null),
+                            'city' => sanitize_input($data['owner_city'] ?? null),
+                            'created_by' => $_SESSION['user_id'] ?? null,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ];
+                        
+                        // Build owner insert query
+                        $ownerColumns = array_keys($ownerData);
+                        $ownerPlaceholders = array_map(function($col) { return ':' . $col; }, $ownerColumns);
+                        
+                        $ownerSql = "INSERT INTO tp_owners (" . implode(', ', $ownerColumns) . ") 
+                                    VALUES (" . implode(', ', $ownerPlaceholders) . ")";
+                        
+                        $stmt = $pdo->prepare($ownerSql);
+                        foreach ($ownerData as $key => $value) {
+                            $stmt->bindValue(':' . $key, $value);
+                        }
+                        
+                        if ($stmt->execute()) {
+                            $ownerId = $pdo->lastInsertId();
+                        } else {
+                            json_error('Fehler beim Anlegen des Besitzers', 500);
+                        }
+                    }
+                } else {
+                    json_error('Besitzer-Informationen fehlen', 400);
+                }
+            }
+            
+            if (!$ownerId) {
+                json_error('Kein Besitzer zugeordnet', 400);
+            }
             
             // Generate patient number
             $stmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(patient_number, 2) AS UNSIGNED)) as max_num FROM tp_patients WHERE patient_number LIKE 'P%'");
@@ -151,14 +231,14 @@ try {
             // Prepare insert data
             $insertData = [
                 'patient_number' => $patientNumber,
-                'owner_id' => intval($data['owner_id']),
+                'owner_id' => $ownerId,
                 'name' => sanitize_input($data['name']),
                 'species' => sanitize_input($data['species']),
                 'breed' => sanitize_input($data['breed'] ?? null),
                 'color' => sanitize_input($data['color'] ?? null),
                 'gender' => sanitize_input($data['gender'] ?? 'unknown'),
                 'birth_date' => $data['birth_date'] ?? null,
-                'weight' => $data['weight'] ? floatval($data['weight']) : null,
+                'weight' => isset($data['weight']) && $data['weight'] !== '' ? floatval($data['weight']) : null,
                 'microchip' => sanitize_input($data['microchip'] ?? null),
                 'insurance_name' => sanitize_input($data['insurance_name'] ?? null),
                 'insurance_number' => sanitize_input($data['insurance_number'] ?? null),
@@ -189,12 +269,23 @@ try {
             if ($stmt->execute()) {
                 $patientId = $pdo->lastInsertId();
                 
-                // Get the created patient
-                $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE id = :id");
+                // Get the created patient with owner info
+                $stmt = $pdo->prepare("SELECT p.*, 
+                                      o.first_name as owner_first_name, 
+                                      o.last_name as owner_last_name,
+                                      o.email as owner_email,
+                                      o.phone as owner_phone
+                                      FROM tp_patients p 
+                                      LEFT JOIN tp_owners o ON p.owner_id = o.id 
+                                      WHERE p.id = :id");
                 $stmt->execute(['id' => $patientId]);
                 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                json_success($patient, 'Patient erfolgreich angelegt');
+                json_success([
+                    'patient' => $patient,
+                    'patient_id' => $patientId,
+                    'owner_id' => $ownerId
+                ], 'Patient erfolgreich angelegt');
             } else {
                 json_error('Fehler beim Anlegen des Patienten', 500);
             }
