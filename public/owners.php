@@ -1,10 +1,28 @@
 <?php
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/template_standalone.php';
-require_once __DIR__ . '/../includes/auth.php';
+/**
+ * Tierphysio Manager 2.0
+ * Owners Management Page
+ */
 
-$auth = new Auth();
-$auth->requireLogin();
+// Load composer autoloader for dependencies
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load configuration and helpers
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/Auth.php';
+require_once __DIR__ . '/../includes/Database.php';
+require_once __DIR__ . '/../includes/template.php';
+
+// Initialize auth with namespace (Singleton pattern)
+$auth = TierphysioManager\Auth::getInstance();
+
+// Check authentication
+if (!$auth->isLoggedIn()) {
+    header('Location: login.php');
+    exit;
+}
+
 $pdo = get_pdo();
 
 $action = $_GET['action'] ?? 'list';
@@ -23,10 +41,13 @@ try {
     $patients = $pdo->prepare("SELECT id, name, species, breed, birth_date FROM tp_patients WHERE owner_id = ?");
     $patients->execute([$id]);
 
+    // Render owner view template
     render_template('pages/owner_view.twig', [
+      'pageTitle' => 'Besitzer-Details',
       'owner' => $owner,
       'patients' => $patients->fetchAll(PDO::FETCH_ASSOC),
-      'page_title' => 'Besitzer-Details'
+      'user' => $auth->getUser(),
+      'csrf_token' => $auth->getCSRFToken()
     ]);
     exit;
   }
@@ -69,10 +90,13 @@ try {
   $stmt->execute($params);
   $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+  // Render owners list template
   render_template('pages/owners.twig', [
+    'pageTitle' => 'Besitzerverwaltung',
     'owners' => $owners,
     'search' => $search,
-    'page_title' => 'Besitzerübersicht'
+    'user' => $auth->getUser(),
+    'csrf_token' => $auth->getCSRFToken()
   ]);
 
 } catch (Throwable $e) {
