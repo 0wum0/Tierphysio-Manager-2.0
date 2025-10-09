@@ -159,7 +159,9 @@
         <!-- Revenue Chart -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-in">
             <h2 class="text-lg font-heading font-semibold text-gray-900 dark:text-white mb-4">Umsatzentwicklung</h2>
-            <canvas id="revenueChart" class="w-full h-64"></canvas>
+            <div class="chart-container" style="position: relative; height: 16rem; overflow: hidden;">
+                <canvas id="revenueChart"></canvas>
+            </div>
         </div>
     </div>
     
@@ -242,62 +244,100 @@
 </div>
 
 <script>
-    // Initialize Chart.js
+    // Initialize Chart.js with Anti-Scrolling Measures
     document.addEventListener('DOMContentLoaded', () => {
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        const isDark = document.documentElement.classList.contains('dark');
+        // Store current scroll position
+        const currentScrollY = window.scrollY || window.pageYOffset;
+        const currentScrollX = window.scrollX || window.pageXOffset;
         
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
-                datasets: [{
-                    label: 'Umsatz',
-                    data: [4200, 4800, 5200, 5600, 6100, 5800, 6400, 6800, 7200, 6900, 7500, 0],
-                    borderColor: '#9b5de5',
-                    backgroundColor: 'rgba(155, 93, 229, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
+        // Use requestAnimationFrame for smooth, non-blocking render
+        requestAnimationFrame(() => {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            // Initialize chart with scroll prevention
+            const chart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
+                    datasets: [{
+                        label: 'Umsatz',
+                        data: [4200, 4800, 5200, 5600, 6100, 5800, 6400, 6800, 7200, 6900, 7500, 0],
+                        borderColor: '#9b5de5',
+                        backgroundColor: 'rgba(155, 93, 229, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false, // Disable animations to prevent scrolling issues
+                    onResize: null, // Disable automatic resize observer
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '€ ' + context.parsed.y.toLocaleString('de-DE');
+                                }
+                            }
+                        }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '€ ' + context.parsed.y.toLocaleString('de-DE');
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString('de-DE');
+                                },
+                                color: isDark ? '#9ca3af' : '#6b7280'
+                            },
+                            grid: {
+                                color: isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)'
                             }
                         }
                     }
                 },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: isDark ? '#9ca3af' : '#6b7280'
-                        }
-                    },
-                    y: {
-                        ticks: {
-                            callback: function(value) {
-                                return '€' + value.toLocaleString('de-DE');
-                            },
-                            color: isDark ? '#9ca3af' : '#6b7280'
-                        },
-                        grid: {
-                            color: isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)'
-                        }
+                plugins: [{
+                    id: 'noScroll',
+                    afterRender: () => {
+                        // Force viewport to stay at original position
+                        window.scrollTo({ 
+                            top: currentScrollY, 
+                            left: currentScrollX, 
+                            behavior: 'instant' 
+                        });
                     }
-                }
-            }
+                }]
+            });
+            
+            // Throttled update function (if live updates are needed)
+            let updateTimeout = null;
+            window.updateChart = function(newData) {
+                if (updateTimeout) clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(() => {
+                    const scrollBefore = window.scrollY;
+                    chart.data.datasets[0].data = newData;
+                    chart.update('none'); // Update without animation
+                    window.scrollTo({ top: scrollBefore, behavior: 'instant' });
+                }, 2000);
+            };
         });
+        
+        // Ensure scroll position is maintained after full page load
+        window.scrollTo({ top: currentScrollY, left: currentScrollX, behavior: 'instant' });
     });
 </script>
 {% endblock %}
