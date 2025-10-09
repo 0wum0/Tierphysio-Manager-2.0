@@ -47,10 +47,16 @@ DirectoryIndex index.php
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Protect sensitive files
+# Protect sensitive files (but allow PHP files with 'json' in name)
 <FilesMatch "\.(env|json|lock|md|log)$">
     Order Allow,Deny
     Deny from all
+</FilesMatch>
+
+# Allow PHP files in /api/ even with 'json' in the name
+<FilesMatch "integrity_json\.php$">
+    Order Allow,Deny
+    Allow from all
 </FilesMatch>
 
 # Protect includes folder

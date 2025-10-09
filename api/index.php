@@ -76,6 +76,50 @@ try {
             apiResponse(['status' => 'ok', 'version' => APP_VERSION]);
             break;
             
+        case 'integrity_json':
+            // Integrity check endpoint
+            try {
+                require_once __DIR__ . '/../includes/db.php';
+                
+                // First ensure tp_notes table exists
+                $db->exec("CREATE TABLE IF NOT EXISTS tp_notes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    patient_id INT NOT NULL,
+                    user_id INT DEFAULT 1,
+                    note_type VARCHAR(50) DEFAULT 'general',
+                    content TEXT NOT NULL,
+                    is_important TINYINT(1) DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_patient (patient_id),
+                    INDEX idx_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+                $tables = [
+                    'tp_users','tp_owners','tp_patients',
+                    'tp_appointments','tp_treatments',
+                    'tp_invoices','tp_notes'
+                ];
+                $db->query("SET NAMES utf8mb4");
+
+                $stats = [];
+                foreach ($tables as $tbl) {
+                    $stmt = $db->query("SELECT COUNT(*) AS cnt FROM `$tbl`");
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $stats[$tbl] = intval($row['cnt']);
+                }
+
+                echo json_encode([
+                    'status' => 'success',
+                    'checked_tables' => count($tables),
+                    'table_stats' => $stats
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            } catch (Throwable $e) {
+                apiError('Integritätsprüfung fehlgeschlagen: '.$e->getMessage(), 500);
+            }
+            break;
+            
         case 'auth':
             require_once __DIR__ . '/auth/index.php';
             break;

@@ -40,6 +40,29 @@ $action = $_GET['action'] ?? 'list';
 try {
     $pdo = get_pdo();
     
+    // Ensure tp_notes table exists - if it fails, return empty result
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tp_notes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            patient_id INT NOT NULL,
+            user_id INT DEFAULT 1,
+            note_type VARCHAR(50) DEFAULT 'general',
+            content TEXT NOT NULL,
+            is_important TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_patient (patient_id),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        // If table creation fails, return empty result set
+        if ($action === 'list') {
+            api_success(['data' => [], 'count' => 0]);
+        } else {
+            api_error('Notes-Tabelle konnte nicht erstellt werden', 500);
+        }
+    }
+    
     switch ($action) {
         case 'list':
             $patient_id = intval($_GET['patient_id'] ?? 0);
@@ -292,10 +315,10 @@ try {
     
 } catch (PDOException $e) {
     error_log("Notes API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten', 500);
 } catch (Throwable $e) {
     error_log("Notes API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten', 500);
 }
 
 // Should never reach here
