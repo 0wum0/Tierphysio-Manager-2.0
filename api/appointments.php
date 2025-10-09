@@ -1,38 +1,10 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Appointments API Endpoint - Hardened with tp_ prefix & proper JSON responses
+ * Appointments API Endpoint - Unified JSON Response Format
  */
 
-// Set JSON header immediately
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
-// Error reporting for production
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-// Clear any existing output
-if (ob_get_length()) ob_end_clean();
-ob_start();
-
-require_once __DIR__ . '/../includes/db.php';
-
-// API Helper Functions
-function api_success($data = [], $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
+require_once __DIR__ . '/_bootstrap.php';
 
 // Get action from request
 $action = $_GET['action'] ?? 'list';
@@ -77,8 +49,12 @@ if ($action === 'integrity' || isset($_GET['integrity_check'])) {
         }
 
         api_success([
-            'checked_tables' => count($tables),
-            'table_stats' => $stats
+            'items' => [[
+                'check' => 'db',
+                'ok' => true,
+                'checked_tables' => count($tables),
+                'table_stats' => $stats
+            ]]
         ]);
     } catch (Throwable $e) {
         api_error('Integritätsprüfung fehlgeschlagen: '.$e->getMessage(), 500);
@@ -146,7 +122,7 @@ try {
             
             $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success(['data' => $appointments, 'count' => count($appointments)]);
+            api_success(['items' => $appointments, 'count' => count($appointments)]);
             break;
             
         case 'get':
@@ -179,7 +155,7 @@ try {
                 api_error('Appointment nicht gefunden', 404);
             }
             
-            api_success($appointment);
+            api_success(['items' => [$appointment]]);
             break;
             
         case 'create':
@@ -241,7 +217,7 @@ try {
             $stmt->execute([$id]);
             $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['appointment' => $appointment, 'appointment_id' => $id], 201);
+            api_success(['items' => [$appointment]]);
             break;
             
         case 'update':
@@ -295,7 +271,7 @@ try {
                 $id
             ]);
             
-            api_success(['message' => 'Appointment erfolgreich aktualisiert']);
+            api_success(['items' => []]);
             break;
             
         case 'delete':
@@ -313,7 +289,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM tp_appointments WHERE id = ?");
             $stmt->execute([$id]);
             
-            api_success(['message' => 'Appointment erfolgreich gelöscht']);
+            api_success(['items' => []]);
             break;
             
         default:
@@ -322,10 +298,10 @@ try {
     
 } catch (PDOException $e) {
     error_log("Appointments API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten');
 } catch (Throwable $e) {
     error_log("Appointments API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten');
 }
 
 // Should never reach here

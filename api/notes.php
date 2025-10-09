@@ -1,38 +1,10 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Notes API Endpoint - Hardened with tp_ prefix & proper JSON responses
+ * Notes API Endpoint - Unified JSON Response Format
  */
 
-// Set JSON header immediately
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
-// Error reporting for production
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-// Clear any existing output
-if (ob_get_length()) ob_end_clean();
-ob_start();
-
-require_once __DIR__ . '/../includes/db.php';
-
-// API Helper Functions
-function api_success($data = [], $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
+require_once __DIR__ . '/_bootstrap.php';
 
 // Get action from request
 $action = $_GET['action'] ?? 'list';
@@ -45,11 +17,11 @@ if ($action === 'list') {
         $stmt = $pdo->query("SHOW TABLES LIKE 'tp_notes'");
         if ($stmt->rowCount() === 0) {
             // Table doesn't exist, return empty result
-            api_success(['data' => [], 'count' => 0]);
+            api_success(['items' => [], 'count' => 0]);
         }
     } catch (Exception $e) {
         // Any database issue, return empty result for list
-        api_success(['data' => [], 'count' => 0]);
+        api_success(['items' => [], 'count' => 0]);
     }
 }
 
@@ -105,7 +77,7 @@ try {
                 $note['author_full_name'] = trim($note['author_first_name'] . ' ' . $note['author_last_name']);
             }
             
-            api_success(['data' => $notes, 'count' => count($notes)]);
+            api_success(['items' => $notes, 'count' => count($notes)]);
             break;
             
         case 'get':
@@ -137,7 +109,7 @@ try {
             
             $note['is_important'] = (bool) $note['is_important'];
             
-            api_success($note);
+            api_success(['items' => [$note]]);
             break;
             
         case 'create':
@@ -200,7 +172,7 @@ try {
             
             $note['is_important'] = (bool) $note['is_important'];
             
-            api_success(['note_id' => $note_id, 'note' => $note]);
+            api_success(['items' => [$note]]);
             break;
             
         case 'update':
@@ -244,7 +216,7 @@ try {
                 $id
             ]);
             
-            api_success(['message' => 'Notiz erfolgreich aktualisiert']);
+            api_success(['items' => []]);
             break;
             
         case 'delete':
@@ -262,7 +234,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM tp_notes WHERE id = ?");
             $stmt->execute([$id]);
             
-            api_success(['message' => 'Notiz erfolgreich gelöscht']);
+            api_success(['items' => []]);
             break;
             
         case 'recent':
@@ -295,7 +267,7 @@ try {
                 $note['author_full_name'] = trim($note['author_first_name'] . ' ' . $note['author_last_name']);
             }
             
-            api_success(['data' => $notes, 'count' => count($notes)]);
+            api_success(['items' => $notes, 'count' => count($notes)]);
             break;
             
         default:
@@ -305,11 +277,11 @@ try {
 } catch (PDOException $e) {
     error_log("Notes API PDO Error (" . $action . "): " . $e->getMessage());
     $debug_details = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => $debug_details]);
+    api_error('Datenbankfehler aufgetreten');
 } catch (Throwable $e) {
     error_log("Notes API Error (" . $action . "): " . $e->getMessage());
     $debug_details = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
-    api_error('Serverfehler aufgetreten', 500, ['details' => $debug_details]);
+    api_error('Serverfehler aufgetreten');
 }
 
 // Should never reach here

@@ -1,60 +1,10 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Patients API Endpoint - Hardened with tp_ prefix & proper JSON responses
+ * Patients API Endpoint - Unified JSON Response Format
  */
 
-// Set JSON header immediately
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
-// Error reporting for production
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-// Clear any existing output
-if (ob_get_length()) ob_end_clean();
-ob_start();
-
-require_once __DIR__ . '/../includes/db.php';
-
-// API Helper Functions
-function api_success($data = [], $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-// Helper function to generate patient number
-function generatePatientNumber($pdo) {
-    do {
-        $patient_number = 'P' . date('ymd') . rand(1000, 9999);
-        $stmt = $pdo->prepare("SELECT id FROM tp_patients WHERE patient_number = ?");
-        $stmt->execute([$patient_number]);
-    } while ($stmt->fetch());
-    
-    return $patient_number;
-}
-
-// Helper function to generate customer number for new owner
-function generateCustomerNumber($pdo) {
-    do {
-        $customer_number = 'K' . date('ymd') . rand(1000, 9999);
-        $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE customer_number = ?");
-        $stmt->execute([$customer_number]);
-    } while ($stmt->fetch());
-    
-    return $customer_number;
-}
+require_once __DIR__ . '/_bootstrap.php';
 
 // Get action from request
 $action = $_GET['action'] ?? 'list';
@@ -65,38 +15,99 @@ try {
     
     switch ($action) {
         case 'list':
-            $stmt = $pdo->prepare("
+            // Optional search and status parameters
+            $search = trim($_GET['search'] ?? '');
+            $status = trim($_GET['status'] ?? '');
+            
+            // Base query with owner join
+            $query = "
                 SELECT 
                     p.id,
+                    p.owner_id,
                     p.patient_number,
                     p.name,
                     p.species,
                     p.breed,
-                    p.gender,
                     p.birth_date,
-                    p.weight,
-                    p.microchip,
                     p.is_active,
-                    p.created_at,
-                    o.id AS owner_id,
-                    CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
-                    o.customer_number AS owner_customer_number,
-                    o.phone AS owner_phone,
+                    o.first_name AS owner_first_name,
+                    o.last_name AS owner_last_name,
                     o.email AS owner_email
                 FROM tp_patients p
-                LEFT JOIN tp_owners o ON o.id = p.owner_id
-                ORDER BY p.created_at DESC
-            ");
+                JOIN tp_owners o ON o.id = p.owner_id
+                WHERE 1=1
+            ";
+            
+            $params = [];
+            
+            // Apply search filter
+            if ($search) {
+                $query .= " AND (p.name LIKE :search OR p.patient_number LIKE :search OR o.last_name LIKE :search)";
+                $params['search'] = '%' . $search . '%';
+            }
+            
+            // Apply status filter
+            if ($status !== '') {
+                if ($status === 'active') {
+                    $query .= " AND p.is_active = 1";
+                } elseif ($status === 'inactive') {
+                    $query .= " AND p.is_active = 0";
+                }
+            }
+            
+            $query .= " ORDER BY p.created_at DESC";
+            
+            // Apply pagination if provided
+            $limit = intval($_GET['limit'] ?? 0);
+            $offset = intval($_GET['offset'] ?? 0);
+            
+            if ($limit > 0) {
+                $query .= " LIMIT :limit OFFSET :offset";
+            }
+            
+            $stmt = $pdo->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(':' . $key, $value);
+            }
+            if ($limit > 0) {
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            }
+            
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
+            // Get total count
+            $countQuery = "
+                SELECT COUNT(*) as total
+                FROM tp_patients p
+                JOIN tp_owners o ON o.id = p.owner_id
+                WHERE 1=1
+            ";
+            
+            if ($search) {
+                $countQuery .= " AND (p.name LIKE :search OR p.patient_number LIKE :search OR o.last_name LIKE :search)";
+            }
+            
+            if ($status === 'active') {
+                $countQuery .= " AND p.is_active = 1";
+            } elseif ($status === 'inactive') {
+                $countQuery .= " AND p.is_active = 0";
+            }
+            
+            $countStmt = $pdo->prepare($countQuery);
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue(':' . $key, $value);
+            }
+            $countStmt->execute();
+            $total = $countStmt->fetchColumn();
+            
             // Format data
             foreach ($rows as &$row) {
-                $row['owner_full_name'] = $row['owner_full_name'] ?: '—';
                 $row['is_active'] = (bool) $row['is_active'];
             }
             
-            api_success(['data' => $rows, 'count' => count($rows)]);
+            api_success(['items' => $rows, 'count' => $total]);
             break;
             
         case 'get':
@@ -142,7 +153,7 @@ try {
             $stmt->execute([$id]);
             $patient['recent_treatments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success($patient);
+            api_success(['items' => [$patient]]);
             break;
             
         case 'create':
@@ -274,11 +285,7 @@ try {
                 $stmt->execute([$patient_id]);
                 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                api_success([
-                    'patient_id' => $patient_id,
-                    'owner_id' => $owner_id,
-                    'patient' => $patient
-                ], 201);
+                api_success(['items' => [$patient]]);
                 
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -352,7 +359,7 @@ try {
             $stmt->execute([$id]);
             $patient = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['patient' => $patient, 'message' => 'Patient erfolgreich aktualisiert']);
+            api_success(['items' => [$patient]]);
             break;
             
         case 'delete':
@@ -389,7 +396,7 @@ try {
                 
                 $pdo->commit();
                 
-                api_success(['message' => 'Patient erfolgreich gelöscht']);
+                api_success(['items' => []]);
                 
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -403,10 +410,10 @@ try {
     
 } catch (PDOException $e) {
     error_log("Patients API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten');
 } catch (Throwable $e) {
     error_log("Patients API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten');
 }
 
 // Should never reach here

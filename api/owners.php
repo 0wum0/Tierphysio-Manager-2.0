@@ -1,49 +1,10 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Owners API Endpoint - Hardened with tp_ prefix & proper JSON responses
+ * Owners API Endpoint - Unified JSON Response Format
  */
 
-// Set JSON header immediately
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
-// Error reporting for production
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-// Clear any existing output
-if (ob_get_length()) ob_end_clean();
-ob_start();
-
-require_once __DIR__ . '/../includes/db.php';
-
-// API Helper Functions
-function api_success($data = [], $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-// Helper function to generate customer number
-function generateCustomerNumber($pdo) {
-    do {
-        $customer_number = 'K' . date('ymd') . rand(1000, 9999);
-        $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE customer_number = ?");
-        $stmt->execute([$customer_number]);
-    } while ($stmt->fetch());
-    
-    return $customer_number;
-}
+require_once __DIR__ . '/_bootstrap.php';
 
 // Get action from request
 $action = $_GET['action'] ?? 'list';
@@ -56,89 +17,42 @@ try {
             // Optional search parameter
             $search = trim($_GET['search'] ?? '');
             
-            // Build query
+            // Build query - only select minimal fields for list view
             if ($search) {
                 $searchTerm = '%' . $search . '%';
                 $stmt = $pdo->prepare("
                     SELECT 
-                        o.id,
-                        o.customer_number,
-                        o.salutation,
-                        o.first_name,
-                        o.last_name,
-                        o.company,
-                        o.email,
-                        o.phone,
-                        o.mobile,
-                        o.street,
-                        o.house_number,
-                        o.postal_code,
-                        o.city,
-                        o.created_at,
-                        COUNT(p.id) AS patient_count
-                    FROM tp_owners o
-                    LEFT JOIN tp_patients p ON o.id = p.owner_id
-                    WHERE o.first_name LIKE :search 
-                       OR o.last_name LIKE :search
-                       OR o.company LIKE :search
-                       OR o.email LIKE :search
-                       OR o.customer_number LIKE :search
-                    GROUP BY o.id
-                    ORDER BY o.created_at DESC
+                        id,
+                        first_name,
+                        last_name,
+                        email,
+                        phone
+                    FROM tp_owners
+                    WHERE first_name LIKE :search 
+                       OR last_name LIKE :search
+                       OR email LIKE :search
+                       OR phone LIKE :search
+                    ORDER BY last_name, first_name
                 ");
                 $stmt->execute(['search' => $searchTerm]);
             } else {
                 $stmt = $pdo->prepare("
                     SELECT 
-                        o.id,
-                        o.customer_number,
-                        o.salutation,
-                        o.first_name,
-                        o.last_name,
-                        o.company,
-                        o.email,
-                        o.phone,
-                        o.mobile,
-                        o.street,
-                        o.house_number,
-                        o.postal_code,
-                        o.city,
-                        o.created_at,
-                        COUNT(p.id) AS patient_count
-                    FROM tp_owners o
-                    LEFT JOIN tp_patients p ON o.id = p.owner_id
-                    GROUP BY o.id
-                    ORDER BY o.created_at DESC
+                        id,
+                        first_name,
+                        last_name,
+                        email,
+                        phone
+                    FROM tp_owners
+                    ORDER BY last_name, first_name
                 ");
                 $stmt->execute();
             }
             
             $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $total = count($owners);
             
-            // Format response
-            $items = [];
-            foreach ($owners as $owner) {
-                $items[] = [
-                    'id' => $owner['id'],
-                    'customer_number' => $owner['customer_number'],
-                    'salutation' => $owner['salutation'],
-                    'first_name' => $owner['first_name'],
-                    'last_name' => $owner['last_name'],
-                    'full_name' => trim($owner['first_name'] . ' ' . $owner['last_name']),
-                    'company' => $owner['company'],
-                    'email' => $owner['email'],
-                    'phone' => $owner['phone'],
-                    'mobile' => $owner['mobile'],
-                    'street' => $owner['street'],
-                    'house_number' => $owner['house_number'],
-                    'postal_code' => $owner['postal_code'],
-                    'city' => $owner['city'],
-                    'patient_count' => intval($owner['patient_count']),
-                    'created_at' => $owner['created_at']
-                ];
-            }
-            
-            api_success(['data' => $items, 'count' => count($items)]);
+            api_success(['items' => $owners, 'count' => $total]);
             break;
             
         case 'get':
@@ -167,7 +81,7 @@ try {
             $stmt->execute([$id]);
             $owner['patients'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success($owner);
+            api_success(['items' => [$owner]]);
             break;
             
         case 'create':
@@ -222,7 +136,7 @@ try {
             $stmt->execute([$owner_id]);
             $owner = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['owner' => $owner, 'owner_id' => $owner_id], 201);
+            api_success(['items' => [$owner]]);
             break;
             
         case 'update':
@@ -285,7 +199,7 @@ try {
             $stmt->execute([$id]);
             $owner = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['owner' => $owner, 'message' => 'Besitzer erfolgreich aktualisiert']);
+            api_success(['items' => [$owner]]);
             break;
             
         case 'delete':
@@ -315,7 +229,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM tp_owners WHERE id=?");
             $stmt->execute([$id]);
             
-            api_success(['message' => 'Besitzer erfolgreich gelöscht']);
+            api_success(['items' => []]);
             break;
             
         case 'search':
@@ -355,7 +269,7 @@ try {
                 ];
             }
             
-            api_success(['data' => $items, 'count' => count($items)]);
+            api_success(['items' => $items, 'count' => count($items)]);
             break;
             
         default:
@@ -364,10 +278,10 @@ try {
     
 } catch (PDOException $e) {
     error_log("Owners API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten');
 } catch (Throwable $e) {
     error_log("Owners API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten');
 }
 
 // Should never reach here
