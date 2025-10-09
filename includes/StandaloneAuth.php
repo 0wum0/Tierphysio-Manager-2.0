@@ -1,10 +1,16 @@
 <?php
+if (class_exists('\TierphysioManager\Auth')) { return; }
 /**
  * Tierphysio Manager 2.0
  * Standalone Auth Class (no Composer dependencies except Twig)
  */
 
-class Auth {
+namespace TierphysioManager\Legacy;
+
+use PDO;
+use PDOException;
+
+class LegacyAuth {
     private $pdo;
     private $user = null;
     private $sessionName = 'tierphysio_session';
@@ -261,22 +267,10 @@ class Auth {
     }
     
     /**
-     * Get CSRF Token (alias for generateCSRFToken for compatibility)
+     * Get CSRF field for forms
+     * @return string
      */
-    public function getCSRFToken() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
-    }
-    
-    /**
-     * Verify CSRF token
-     */
-    public function verifyCSRFToken($token) {
-        return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    public function getCSRFField(): string {
+        return '<input type="hidden" name="csrf_token" value="'.$this->getCSRFToken().'">';
     }
 }

@@ -4,23 +4,23 @@
  * Version Information
  */
 
-define('APP_VERSION', '2.0.0');
-define('DB_VERSION', '2.0.0');
-define('APP_NAME', 'Tierphysio Manager');
-define('APP_DESCRIPTION', 'Moderne Praxisverwaltung für Tierphysiotherapie');
-define('APP_AUTHOR', 'TierphysioManager Team');
-define('APP_YEAR', '2024');
-define('MIN_PHP_VERSION', '8.3.0');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.0.0');
+if (!defined('DB_VERSION')) define('DB_VERSION', '2.0.0');
+if (!defined('APP_NAME')) define('APP_NAME', 'Tierphysio Manager');
+if (!defined('APP_DESCRIPTION')) define('APP_DESCRIPTION', 'Moderne Praxisverwaltung für Tierphysiotherapie');
+if (!defined('APP_AUTHOR')) define('APP_AUTHOR', 'TierphysioManager Team');
+if (!defined('APP_YEAR')) define('APP_YEAR', '2024');
+if (!defined('MIN_PHP_VERSION')) define('MIN_PHP_VERSION', '8.3.0');
 
 // Feature Flags
-define('FEATURE_PWA', true);
-define('FEATURE_DARK_MODE', true);
-define('FEATURE_BACKUP', true);
-define('FEATURE_API', true);
-define('FEATURE_MULTI_LANGUAGE', true);
+if (!defined('FEATURE_PWA')) define('FEATURE_PWA', true);
+if (!defined('FEATURE_DARK_MODE')) define('FEATURE_DARK_MODE', true);
+if (!defined('FEATURE_BACKUP')) define('FEATURE_BACKUP', true);
+if (!defined('FEATURE_API')) define('FEATURE_API', true);
+if (!defined('FEATURE_MULTI_LANGUAGE')) define('FEATURE_MULTI_LANGUAGE', true);
 
 // System Requirements
-define('REQUIREMENTS', [
+if (!defined('REQUIREMENTS')) define('REQUIREMENTS', [
     'php' => '8.3.0',
     'extensions' => [
         'pdo' => 'PDO',

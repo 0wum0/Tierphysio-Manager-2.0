@@ -1,9 +1,13 @@
 <?php
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/template_standalone.php';
-require_once __DIR__ . '/../includes/auth.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-$auth = new Auth();
+require_once __DIR__ . '/../includes/new.config.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/template_standalone.php';
+
+$auth = new \TierphysioManager\Auth();
 $auth->requireLogin();
 $pdo = get_pdo();
 
@@ -76,6 +80,8 @@ try {
   ]);
 
 } catch (Throwable $e) {
-  echo "<pre style='color:red'>Fehler: ".$e->getMessage()."</pre>";
+  error_log('Owners render error: '.$e->getMessage());
+  http_response_code(500);
+  echo "<h1>Fehler</h1><pre>".htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')."</pre>";
   exit;
 }

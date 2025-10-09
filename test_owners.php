@@ -68,7 +68,7 @@ try {
 echo "\n[3] Testing Auth class...\n";
 try {
     require_once __DIR__ . '/includes/auth.php';
-    $auth = new Auth();
+    $auth = new \TierphysioManager\Auth();
     echo "  ✓ Auth class loaded successfully\n";
     echo "  ✓ CSRF Token generated: " . substr($auth->getCSRFToken(), 0, 10) . "...\n";
 } catch (Exception $e) {
