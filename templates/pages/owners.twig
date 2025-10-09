@@ -1,6 +1,6 @@
 {% extends 'layouts/base.twig' %}
 
-{% block title %}Besitzerverwaltung - {{ parent() }}{% endblock %}
+{% block title %}Besitzerverwaltung - Tierphysio Manager{% endblock %}
 
 {% block content %}
 <div class="space-y-6 animate-in">
@@ -15,78 +15,37 @@
             </p>
         </div>
         <div class="mt-4 sm:mt-0">
-            <button onclick="window.location.href='/public/owners.php?action=new'" 
-                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+            <a href="/public/owners.php?action=new" 
+               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
                 </svg>
                 Neuer Besitzer
-            </button>
+            </a>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Gesamt Besitzer</p>
-                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">156</p>
-                </div>
-                <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Aktive Kunden</p>
-                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">142</p>
-                </div>
-                <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Neue (Monat)</p>
-                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">8</p>
-                </div>
-                <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-purple-500/20 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Ø Tiere/Besitzer</p>
-                    <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">1.4</p>
-                </div>
-                <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M4.5 10.5C4.5 12.9853 6.51472 15 9 15C11.4853 15 13.5 12.9853 13.5 10.5C13.5 8.01472 11.4853 6 9 6C6.51472 6 4.5 8.01472 4.5 10.5Z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
+    <!-- Flash Messages -->
+    {% if flash_success %}
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+        <span class="block sm:inline">{{ flash_success }}</span>
     </div>
+    {% endif %}
+    
+    {% if flash_error %}
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+        <span class="block sm:inline">{{ flash_error }}</span>
+    </div>
+    {% endif %}
 
     <!-- Search Section -->
     <div class="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 shadow-xl">
-        <div class="flex flex-col md:flex-row gap-4">
+        <form method="GET" action="/public/owners.php" class="flex flex-col md:flex-row gap-4">
             <div class="flex-1">
                 <div class="relative">
                     <input type="text" 
+                           name="search"
+                           value="{{ filters.search }}"
                            placeholder="Nach Name, Email oder Telefonnummer suchen..." 
                            class="w-full px-4 py-2 pl-10 bg-white/50 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white placeholder-gray-400">
                     <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,10 +53,15 @@
                     </svg>
                 </div>
             </div>
-            <button class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            <button type="submit" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                 Suchen
             </button>
-        </div>
+            {% if filters.search %}
+            <a href="/public/owners.php" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                Zurücksetzen
+            </a>
+            {% endif %}
+        </form>
     </div>
 
     <!-- Owners Table -->
@@ -115,11 +79,11 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                             Stadt
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Erstellt am
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Patienten
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Status
+                            Erstellt am
                         </th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                             Aktionen
@@ -127,193 +91,126 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-purple-500/10">
-                    <!-- Owners will be loaded here via JavaScript -->
+                    {% if owners|length == 0 %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            {% if filters.search %}
+                                Keine Besitzer gefunden für "{{ filters.search }}".
+                            {% else %}
+                                Keine Besitzer vorhanden.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                        {% for owner in owners %}
+                        {% set initials = (owner.first_name|default('')|slice(0,1)|upper) ~ (owner.last_name|default('')|slice(0,1)|upper) %}
+                        {% if initials == '' %}{% set initials = 'XX' %}{% endif %}
+                        {% set fullName = (owner.first_name|default('') ~ ' ' ~ owner.last_name|default(''))|trim %}
+                        {% if fullName == '' %}{% set fullName = 'Unbekannt' %}{% endif %}
+                        
+                        <tr class="hover:bg-purple-500/5 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold">
+                                        {{ initials }}
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ fullName }}</div>
+                                        {% if owner.customer_number %}
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">Nr: {{ owner.customer_number }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900 dark:text-white">{{ owner.email|default('-') }}</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">{{ owner.phone|default('-') }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900 dark:text-white">
+                                    {% if owner.city %}
+                                        {{ owner.city }}
+                                        {% if owner.postal_code %}
+                                            <span class="text-gray-500">({{ owner.postal_code }})</span>
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full">
+                                    {{ owner.patient_count|default(0) }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                {% if owner.created_at %}
+                                    {{ owner.created_at|date('d.m.Y') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                <a href="/public/owners.php?action=view&id={{ owner.id }}" 
+                                   class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">
+                                    Anzeigen
+                                </a>
+                                <a href="/public/owners.php?action=edit&id={{ owner.id }}" 
+                                   class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 mr-3">
+                                    Bearbeiten
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 
     <!-- Pagination -->
+    {% if pagination.total > 1 %}
     <div class="flex items-center justify-between">
         <p class="text-sm text-gray-600 dark:text-gray-400">
-            Zeige <span class="font-medium text-purple-600">1-10</span> von <span class="font-medium text-purple-600">156</span> Besitzern
+            Zeige 
+            <span class="font-medium text-purple-600">{{ (pagination.current - 1) * pagination.perPage + 1 }}</span>
+            bis 
+            <span class="font-medium text-purple-600">{{ min(pagination.current * pagination.perPage, pagination.totalCount) }}</span>
+            von 
+            <span class="font-medium text-purple-600">{{ pagination.totalCount }}</span>
+            Besitzern
         </p>
         <div class="flex space-x-2">
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
+            {% if pagination.current > 1 %}
+            <a href="/public/owners.php?page={{ pagination.current - 1 }}{% if filters.search %}&search={{ filters.search|url_encode }}{% endif %}"
+               class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
                 Zurück
-            </button>
-            <button class="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                1
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
-                2
-            </button>
-            <button class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
+            </a>
+            {% endif %}
+            
+            {% for page in 1..pagination.total %}
+                {% if page == pagination.current %}
+                <button class="px-3 py-1 bg-purple-600 text-white rounded-lg">
+                    {{ page }}
+                </button>
+                {% elseif page == 1 or page == pagination.total or (page >= pagination.current - 2 and page <= pagination.current + 2) %}
+                <a href="/public/owners.php?page={{ page }}{% if filters.search %}&search={{ filters.search|url_encode }}{% endif %}"
+                   class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
+                    {{ page }}
+                </a>
+                {% elseif page == pagination.current - 3 or page == pagination.current + 3 %}
+                <span class="px-2 text-gray-500">...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.current < pagination.total %}
+            <a href="/public/owners.php?page={{ pagination.current + 1 }}{% if filters.search %}&search={{ filters.search|url_encode }}{% endif %}"
+               class="px-3 py-1 bg-white/10 dark:bg-gray-700/50 border border-purple-300/30 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-purple-500/20 transition-colors">
                 Weiter
-            </button>
+            </a>
+            {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
-
-<script>
-    let ownersData = [];
-
-    // Load owners from API
-    async function loadOwners() {
-        try {
-            const res = await fetch('/api/owners.php?action=list');
-            const data = await res.json();
-            
-            if (data.ok !== true && data.status !== 'success') {
-                throw new Error(data.message || 'API error');
-            }
-            
-            const owners = data.data?.items ?? data.items ?? [];
-            renderOwners(owners);
-            ownersData = owners;
-        } catch (error) {
-            console.error('Error loading owners:', error);
-            showError('Fehler beim Laden der Besitzer: ' + error.message);
-        }
-    }
-
-    // Render owners in table
-    function renderOwners(owners) {
-        const tbody = document.querySelector('tbody');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-        
-        if (owners.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                        Keine Besitzer gefunden.
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        owners.forEach(owner => {
-            const initials = ((owner.first_name?.[0] || '') + (owner.last_name?.[0] || '')).toUpperCase() || 'XX';
-            const fullName = `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || 'Unbekannt';
-            const createdDate = owner.created_at ? new Date(owner.created_at).toLocaleDateString('de-DE') : '';
-            
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-purple-500/5 transition-colors';
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold">
-                            ${initials}
-                        </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900 dark:text-white">${fullName}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">ID: ${owner.id}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900 dark:text-white">${owner.email || '-'}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">${owner.phone || '-'}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900 dark:text-white">${owner.city || '-'}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    ${createdDate}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-600 dark:text-green-400 rounded-full">
-                        Aktiv
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <button onclick="editOwner(${owner.id})" class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 mr-3">
-                        Bearbeiten
-                    </button>
-                    <button onclick="deleteOwner(${owner.id})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                        Löschen
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
-
-    // Edit owner
-    function editOwner(id) {
-        window.location.href = `/public/owners.php?action=edit&id=${id}`;
-    }
-
-    // Delete owner
-    async function deleteOwner(id) {
-        if (!confirm('Möchten Sie diesen Besitzer wirklich löschen?')) {
-            return;
-        }
-        
-        try {
-            const res = await fetch(`/api/owners.php?action=delete&id=${id}`, { method: 'GET' });
-            const data = await res.json();
-            
-            if (data.ok !== true && data.status !== 'success') {
-                throw new Error(data.message || 'API error');
-            }
-            
-            // Reload owners
-            loadOwners();
-        } catch (error) {
-            console.error('Error deleting owner:', error);
-            alert('Fehler beim Löschen: ' + error.message);
-        }
-    }
-
-    // Show error message
-    function showError(message) {
-        const container = document.querySelector('.space-y-6');
-        const alert = document.createElement('div');
-        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
-        alert.innerHTML = `
-            <strong class="font-bold">Fehler!</strong>
-            <span class="block sm:inline">${message}</span>
-        `;
-        container.insertBefore(alert, container.firstChild);
-        
-        setTimeout(() => alert.remove(), 5000);
-    }
-
-    // Search functionality
-    const searchInput = document.querySelector('input[type="text"]');
-    const searchButton = searchInput?.nextElementSibling;
-    
-    if (searchButton) {
-        searchButton.addEventListener('click', () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filtered = ownersData.filter(owner => {
-                const fullName = `${owner.first_name} ${owner.last_name}`.toLowerCase();
-                const email = (owner.email || '').toLowerCase();
-                const phone = (owner.phone || '').toLowerCase();
-                return fullName.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm);
-            });
-            renderOwners(filtered);
-        });
-    }
-
-    // Animation on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        // Load data
-        loadOwners();
-        
-        // Animation
-        anime({
-            targets: '.animate-in > *',
-            translateY: [30, 0],
-            opacity: [0, 1],
-            duration: 800,
-            delay: anime.stagger(100),
-            easing: 'easeOutExpo'
-        });
-    });
-</script>
 {% endblock %}

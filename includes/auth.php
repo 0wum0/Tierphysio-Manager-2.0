@@ -4,6 +4,9 @@
  * Authentication Helper Functions
  */
 
+// Include the standalone Auth class
+require_once __DIR__ . '/StandaloneAuth.php';
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
