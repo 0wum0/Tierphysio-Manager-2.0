@@ -157,7 +157,7 @@ require_once __DIR__ . '/../includes/db.php';
                     ['Nina', 'Koch', '0170-0123456', 'nina.koch@example.com', 'Feldweg 12, 10965 Berlin']
                 ];
                 
-                $stmt = $pdo->prepare("INSERT INTO owners (first_name, last_name, phone, email, address) VALUES (?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO tp_owners (first_name, last_name, phone, email, address) VALUES (?, ?, ?, ?, ?)");
                 foreach ($owners as $owner) {
                     $stmt->execute($owner);
                 }
@@ -183,17 +183,17 @@ require_once __DIR__ . '/../includes/db.php';
                     [5, 'Duke', 'dog', 'Rottweiler', '2017-11-29', 'male', 45.0, '276098106234578', 'Schwarz mit braun', 'Gut sozialisiert, kinderfreundlich']
                 ];
                 
-                $stmt = $pdo->prepare("INSERT INTO patients (owner_id, name, species, breed, birthdate, gender, weight, microchip, color, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO tp_patients (owner_id, name, species, breed, birthdate, gender, weight, microchip, color, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 foreach ($patients as $patient) {
                     $stmt->execute($patient);
                 }
                 echo '<div class="status success">✅ ' . count($patients) . ' Patienten eingefügt</div>';
                 
                 // Show summary
-                $stmt = $pdo->query("SELECT COUNT(*) as count FROM owners");
+                $stmt = $pdo->query("SELECT COUNT(*) as count FROM tp_owners");
                 $ownerCount = $stmt->fetch()['count'];
                 
-                $stmt = $pdo->query("SELECT COUNT(*) as count FROM patients");
+                $stmt = $pdo->query("SELECT COUNT(*) as count FROM tp_patients");
                 $patientCount = $stmt->fetch()['count'];
                 
                 echo '<div class="step"><h3>📊 Zusammenfassung:</h3>';

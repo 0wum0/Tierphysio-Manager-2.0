@@ -49,6 +49,52 @@ function pdo() {
     return $pdo;
 }
 
+// Table prefix constant
+if (!defined('DB_TABLE_PREFIX')) {
+    define('DB_TABLE_PREFIX', 'tp_');
+}
+
+/**
+ * Helper function for table name resolution with prefix
+ * @param string $base Base table name without prefix
+ * @return string Full table name with prefix
+ */
+function t(string $base): string {
+    // Map common base names to prefixed tables
+    static $map = [
+        'users' => 'tp_users',
+        'owners' => 'tp_owners',
+        'patients' => 'tp_patients',
+        'invoices' => 'tp_invoices',
+        'invoice_items' => 'tp_invoice_items',
+        'treatments' => 'tp_treatments',
+        'appointments' => 'tp_appointments',
+        'notes' => 'tp_notes',
+        'documents' => 'tp_documents',
+        'settings' => 'tp_settings',
+        'sessions' => 'tp_sessions',
+        'activity_log' => 'tp_activity_log',
+        'migrations' => 'tp_migrations'
+    ];
+    
+    if (isset($map[$base])) {
+        return $map[$base];
+    }
+    
+    // Fallback: add prefix to base name
+    $base = ltrim($base, '` ');
+    $base = rtrim($base, '` ');
+    return DB_TABLE_PREFIX . $base;
+}
+
+/**
+ * Get PDO connection (alias for backward compatibility)
+ * @return PDO
+ */
+function get_pdo(): PDO {
+    return pdo();
+}
+
 // Set timezone
 date_default_timezone_set(APP_TIMEZONE);
 
