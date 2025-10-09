@@ -6,7 +6,7 @@
 
 // Set JSON header immediately
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 
 // Error reporting for production
 error_reporting(E_ALL);
