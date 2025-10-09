@@ -445,9 +445,11 @@ function patientsManager() {
                 
                 const data = await response.json();
                 
-                if (data.ok) {
-                    // Data is in data.data.items array
-                    this.patients = data.data?.items || [];
+                // Support both new and old response formats
+                if (data && (data.ok === true || data.status === 'success')) {
+                    // New format: data.data.items, old format: data.data.data or data.data
+                    const items = data.data?.items ?? data.data?.data ?? data.data ?? [];
+                    this.patients = Array.isArray(items) ? items : [];
                     
                     // Animate cards on load
                     this.$nextTick(() => {
@@ -488,9 +490,11 @@ function patientsManager() {
                 
                 const data = await response.json();
                 
-                if (data.ok) {
-                    // Data is in data.data.items array
-                    this.owners = data.data?.items || [];
+                // Support both new and old response formats
+                if (data && (data.ok === true || data.status === 'success')) {
+                    // New format: data.data.items, old format: data.data.data or data.data
+                    const items = data.data?.items ?? data.data?.data ?? data.data ?? [];
+                    this.owners = Array.isArray(items) ? items : [];
                 } else {
                     throw new Error(data.error || 'Unbekannter Fehler');
                 }
@@ -639,7 +643,8 @@ function patientsManager() {
                 
                 const data = await response.json();
                 
-                if (data.ok) {
+                // Support both new and old response formats
+                if (data && (data.ok === true || data.status === 'success')) {
                     this.closeModal();
                     await this.loadOwners(); // Reload owners if new one was created
                     await this.loadPatients();
@@ -686,7 +691,8 @@ function patientsManager() {
                 
                 const data = await response.json();
                 
-                if (data.ok) {
+                // Support both new and old response formats
+                if (data && (data.ok === true || data.status === 'success')) {
                     await this.loadPatients();
                     this.showNotification('Patient erfolgreich gelöscht!', 'success');
                 } else {

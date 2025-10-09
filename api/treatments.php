@@ -1,38 +1,10 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Treatments API Endpoint - Hardened with tp_ prefix & proper JSON responses
+ * Treatments API Endpoint - Unified JSON Response Format
  */
 
-// Set JSON header immediately
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
-// Error reporting for production
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-// Clear any existing output
-if (ob_get_length()) ob_end_clean();
-ob_start();
-
-require_once __DIR__ . '/../includes/db.php';
-
-// API Helper Functions
-function api_success($data = [], $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
-    if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
+require_once __DIR__ . '/_bootstrap.php';
 
 // Get action from request
 $action = $_GET['action'] ?? 'list';
@@ -91,7 +63,7 @@ try {
             
             $treatments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success(['data' => $treatments, 'count' => count($treatments)]);
+            api_success(['items' => $treatments, 'count' => count($treatments)]);
             break;
             
         case 'get':
@@ -123,7 +95,7 @@ try {
                 api_error('Treatment nicht gefunden', 404);
             }
             
-            api_success($treatment);
+            api_success(['items' => [$treatment]]);
             break;
             
         case 'create':
@@ -184,7 +156,7 @@ try {
             $stmt->execute([$id]);
             $treatment = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['treatment' => $treatment, 'treatment_id' => $id], 201);
+            api_success(['items' => [$treatment]]);
             break;
             
         case 'update':
@@ -239,7 +211,7 @@ try {
                 $id
             ]);
             
-            api_success(['message' => 'Treatment erfolgreich aktualisiert']);
+            api_success(['items' => []]);
             break;
             
         case 'delete':
@@ -257,7 +229,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM tp_treatments WHERE id = ?");
             $stmt->execute([$id]);
             
-            api_success(['message' => 'Treatment erfolgreich gelöscht']);
+            api_success(['items' => []]);
             break;
             
         default:
@@ -266,10 +238,10 @@ try {
     
 } catch (PDOException $e) {
     error_log("Treatments API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten');
 } catch (Throwable $e) {
     error_log("Treatments API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten');
 }
 
 // Should never reach here

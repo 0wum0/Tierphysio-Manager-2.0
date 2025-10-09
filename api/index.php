@@ -110,9 +110,17 @@ try {
                 }
 
                 echo json_encode([
+                    'ok' => true,
                     'status' => 'success',
-                    'checked_tables' => count($tables),
-                    'table_stats' => $stats
+                    'data' => [
+                        'items' => [[
+                            'check' => 'db',
+                            'ok' => true,
+                            'checked_tables' => count($tables),
+                            'table_stats' => $stats
+                        ]],
+                        'count' => 1
+                    ]
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 exit;
             } catch (Throwable $e) {
