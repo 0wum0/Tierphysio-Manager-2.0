@@ -107,37 +107,4 @@ function logout_user() {
     session_destroy();
 }
 
-/**
- * Check API authentication
- * Returns JSON error if not authenticated
- */
-function checkApiAuth() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user'])) {
-        // Check if this is an API call
-        $is_api = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
-        
-        if ($is_api) {
-            // Check if response.php is loaded
-            if (function_exists('json_error')) {
-                json_error('Nicht authentifiziert. Bitte einloggen.', 401);
-            } else {
-                // Fallback to direct JSON output
-                header('Content-Type: application/json; charset=utf-8');
-                http_response_code(401);
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Nicht authentifiziert. Bitte einloggen.'
-                ], JSON_UNESCAPED_UNICODE);
-                exit;
-            }
-        } else {
-            // Redirect to login for non-API calls
-            header('Location: /public/login.php');
-            exit;
-        }
-    }
-}
+// checkApiAuth() function is now defined in db.php to avoid duplicate definition
