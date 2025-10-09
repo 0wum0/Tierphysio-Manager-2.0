@@ -96,7 +96,11 @@ function get_pdo(): PDO {
 }
 
 // Set timezone
-date_default_timezone_set(APP_TIMEZONE);
+if (defined('APP_TIMEZONE')) {
+    date_default_timezone_set(APP_TIMEZONE);
+} else {
+    date_default_timezone_set('Europe/Berlin');
+}
 
 // Simple session check function for API authentication
 function checkApiAuth() {

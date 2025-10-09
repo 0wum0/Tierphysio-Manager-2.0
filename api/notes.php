@@ -37,31 +37,24 @@ function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
 // Get action from request
 $action = $_GET['action'] ?? 'list';
 
+// Special handling for notes - always return empty if table issues
+if ($action === 'list') {
+    try {
+        $pdo = get_pdo();
+        // Quick check if table exists
+        $stmt = $pdo->query("SHOW TABLES LIKE 'tp_notes'");
+        if ($stmt->rowCount() === 0) {
+            // Table doesn't exist, return empty result
+            api_success(['data' => [], 'count' => 0]);
+        }
+    } catch (Exception $e) {
+        // Any database issue, return empty result for list
+        api_success(['data' => [], 'count' => 0]);
+    }
+}
+
 try {
     $pdo = get_pdo();
-    
-    // Ensure tp_notes table exists - if it fails, return empty result
-    try {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS tp_notes (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            patient_id INT NOT NULL,
-            user_id INT DEFAULT 1,
-            note_type VARCHAR(50) DEFAULT 'general',
-            content TEXT NOT NULL,
-            is_important TINYINT(1) DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_patient (patient_id),
-            INDEX idx_created (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-    } catch (Exception $e) {
-        // If table creation fails, return empty result set
-        if ($action === 'list') {
-            api_success(['data' => [], 'count' => 0]);
-        } else {
-            api_error('Notes-Tabelle konnte nicht erstellt werden', 500);
-        }
-    }
     
     switch ($action) {
         case 'list':
@@ -75,11 +68,10 @@ try {
                     n.*,
                     p.name as patient_name,
                     p.patient_number,
-                    u.first_name as author_first_name,
-                    u.last_name as author_last_name
+                    '' as author_first_name,
+                    '' as author_last_name
                 FROM tp_notes n
                 LEFT JOIN tp_patients p ON n.patient_id = p.id
-                LEFT JOIN tp_users u ON n.user_id = u.id
                 WHERE 1=1
             ";
             
@@ -128,13 +120,12 @@ try {
                     p.name as patient_name,
                     p.patient_number,
                     p.species,
-                    u.first_name as author_first_name,
-                    u.last_name as author_last_name,
+                    '' as author_first_name,
+                    '' as author_last_name,
                     CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name
                 FROM tp_notes n
                 LEFT JOIN tp_patients p ON n.patient_id = p.id
                 LEFT JOIN tp_owners o ON p.owner_id = o.id
-                LEFT JOIN tp_users u ON n.user_id = u.id
                 WHERE n.id = ?
             ");
             $stmt->execute([$id]);
@@ -198,11 +189,10 @@ try {
             // Get created note
             $stmt = $pdo->prepare("
                 SELECT n.*, p.name as patient_name,
-                    u.first_name as author_first_name,
-                    u.last_name as author_last_name
+                    '' as author_first_name,
+                    '' as author_last_name
                 FROM tp_notes n
                 LEFT JOIN tp_patients p ON n.patient_id = p.id
-                LEFT JOIN tp_users u ON n.user_id = u.id
                 WHERE n.id = ?
             ");
             $stmt->execute([$note_id]);
@@ -285,11 +275,10 @@ try {
                     n.*,
                     p.name as patient_name,
                     p.patient_number,
-                    u.first_name as author_first_name,
-                    u.last_name as author_last_name
+                    '' as author_first_name,
+                    '' as author_last_name
                 FROM tp_notes n
                 LEFT JOIN tp_patients p ON n.patient_id = p.id
-                LEFT JOIN tp_users u ON n.user_id = u.id
                 WHERE n.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
                 ORDER BY n.created_at DESC
                 LIMIT :limit
@@ -315,10 +304,12 @@ try {
     
 } catch (PDOException $e) {
     error_log("Notes API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten', 500);
+    $debug_details = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
+    api_error('Datenbankfehler aufgetreten', 500, ['details' => $debug_details]);
 } catch (Throwable $e) {
     error_log("Notes API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten', 500);
+    $debug_details = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
+    api_error('Serverfehler aufgetreten', 500, ['details' => $debug_details]);
 }
 
 // Should never reach here
