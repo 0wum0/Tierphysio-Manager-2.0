@@ -113,7 +113,7 @@ try {
                 $invoice['net_amount'] = floatval($invoice['net_amount']);
             }
             
-            api_success(['items' => $invoices, 'count' => count($invoices)]);
+            api_success(['data' => $invoices, 'count' => count($invoices)]);
             break;
             
         case 'get':

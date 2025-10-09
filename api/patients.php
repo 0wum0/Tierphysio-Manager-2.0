@@ -96,7 +96,7 @@ try {
                 $row['is_active'] = (bool) $row['is_active'];
             }
             
-            api_success(['items' => $rows, 'count' => count($rows)]);
+            api_success(['data' => $rows, 'count' => count($rows)]);
             break;
             
         case 'get':

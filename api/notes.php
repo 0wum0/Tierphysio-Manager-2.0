@@ -90,7 +90,7 @@ try {
                 $note['author_full_name'] = trim($note['author_first_name'] . ' ' . $note['author_last_name']);
             }
             
-            api_success(['items' => $notes, 'count' => count($notes)]);
+            api_success(['data' => $notes, 'count' => count($notes)]);
             break;
             
         case 'get':
@@ -283,7 +283,7 @@ try {
                 $note['author_full_name'] = trim($note['author_first_name'] . ' ' . $note['author_last_name']);
             }
             
-            api_success(['items' => $notes, 'count' => count($notes)]);
+            api_success(['data' => $notes, 'count' => count($notes)]);
             break;
             
         default:

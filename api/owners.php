@@ -138,7 +138,7 @@ try {
                 ];
             }
             
-            api_success(['items' => $items, 'count' => count($items)]);
+            api_success(['data' => $items, 'count' => count($items)]);
             break;
             
         case 'get':
@@ -322,7 +322,7 @@ try {
             $term = trim($_GET['term'] ?? '');
             
             if (strlen($term) < 2) {
-                api_success(['items' => []]);
+                api_success(['data' => [], 'count' => 0]);
             }
             
             $searchTerm = '%' . $term . '%';
@@ -355,7 +355,7 @@ try {
                 ];
             }
             
-            api_success(['items' => $items]);
+            api_success(['data' => $items, 'count' => count($items)]);
             break;
             
         default:
