@@ -1,0 +1,25 @@
+# API Directory Configuration
+# Override parent restrictions for API endpoints
+
+# Allow PHP files to be executed
+<FilesMatch "\.php$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Ensure PHP is handled correctly
+<IfModule mod_php.c>
+    php_flag engine on
+</IfModule>
+
+# Headers for API responses
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
+# Allow all files in this directory
+Order Allow,Deny
+Allow from all
+Satisfy Any

@@ -37,6 +37,55 @@ function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
 // Get action from request
 $action = $_GET['action'] ?? 'list';
 
+// Special case: if action is 'integrity' or we have a special parameter, run integrity check
+if ($action === 'integrity' || isset($_GET['integrity_check'])) {
+    try {
+        // First ensure tp_notes table exists
+        try {
+            $pdo = get_pdo();
+            $pdo->exec("CREATE TABLE IF NOT EXISTS tp_notes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                patient_id INT NOT NULL,
+                user_id INT DEFAULT 1,
+                note_type VARCHAR(50) DEFAULT 'general',
+                content TEXT NOT NULL,
+                is_important TINYINT(1) DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_patient (patient_id),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch (Exception $e) {
+            // Ignore table creation errors
+        }
+
+        $tables = [
+            'tp_users','tp_owners','tp_patients',
+            'tp_appointments','tp_treatments',
+            'tp_invoices','tp_notes'
+        ];
+        
+        $stats = [];
+        foreach ($tables as $tbl) {
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) AS cnt FROM `$tbl`");
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $stats[$tbl] = intval($row['cnt']);
+            } catch (Exception $e) {
+                $stats[$tbl] = 0;
+            }
+        }
+
+        api_success([
+            'checked_tables' => count($tables),
+            'table_stats' => $stats
+        ]);
+    } catch (Throwable $e) {
+        api_error('Integritätsprüfung fehlgeschlagen: '.$e->getMessage(), 500);
+    }
+    exit;
+}
+
 try {
     $pdo = get_pdo();
     
