@@ -18,22 +18,19 @@ ob_start();
 
 require_once __DIR__ . '/../includes/db.php';
 
-// Unified JSON responders
-function json_ok($data = [], $code = 200) {
+// API Helper Functions
+function api_success($data = [], $extra = []) {
     if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    echo json_encode(['ok' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
+    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
-function json_err($msg, $code = 400, $extra = []) {
+function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
     if (ob_get_length()) ob_end_clean();
     http_response_code($code);
-    $response = ['ok' => false, 'error' => $msg];
-    if (!empty($extra)) {
-        $response = array_merge($response, $extra);
-    }
-    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
@@ -99,14 +96,14 @@ try {
                 $row['is_active'] = (bool) $row['is_active'];
             }
             
-            json_ok(['items' => $rows, 'total' => count($rows)]);
+            api_success(['items' => $rows, 'count' => count($rows)]);
             break;
             
         case 'get':
             $id = intval($_GET['id'] ?? 0);
             
             if (!$id) {
-                json_err('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt', 400);
             }
             
             $stmt = $pdo->prepare("
@@ -130,7 +127,7 @@ try {
             $patient = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$patient) {
-                json_err('Patient nicht gefunden', 404);
+                api_error('Patient nicht gefunden', 404);
             }
             
             // Get treatment history
@@ -145,7 +142,7 @@ try {
             $stmt->execute([$id]);
             $patient['recent_treatments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            json_ok($patient);
+            api_success($patient);
             break;
             
         case 'create':
@@ -176,11 +173,11 @@ try {
             
             // Validate required fields
             if (!$patient_name) {
-                json_err('Patientenname ist erforderlich', 400);
+                api_error('Patientenname ist erforderlich', 400);
             }
             
             if (!$species) {
-                json_err('Tierart ist erforderlich', 400);
+                api_error('Tierart ist erforderlich', 400);
             }
             
             // Begin transaction
@@ -205,7 +202,7 @@ try {
                     // Validate owner data
                     if (!$owner_first && !$owner_last && !$owner_company) {
                         $pdo->rollBack();
-                        json_err('Besitzer: Vor-/Nachname oder Firma erforderlich', 400);
+                        api_error('Besitzer: Vor-/Nachname oder Firma erforderlich', 400);
                     }
                     
                     // Generate customer number
@@ -231,14 +228,14 @@ try {
                     // Verify owner exists
                     if (!$owner_id) {
                         $pdo->rollBack();
-                        json_err('Besitzer ID erforderlich', 400);
+                        api_error('Besitzer ID erforderlich', 400);
                     }
                     
                     $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE id = ?");
                     $stmt->execute([$owner_id]);
                     if (!$stmt->fetch()) {
                         $pdo->rollBack();
-                        json_err('Besitzer nicht gefunden', 404);
+                        api_error('Besitzer nicht gefunden', 404);
                     }
                 }
                 
@@ -277,7 +274,7 @@ try {
                 $stmt->execute([$patient_id]);
                 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                json_ok([
+                api_success([
                     'patient_id' => $patient_id,
                     'owner_id' => $owner_id,
                     'patient' => $patient
@@ -300,14 +297,14 @@ try {
             $id = intval($input['id'] ?? 0);
             
             if (!$id) {
-                json_err('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt', 400);
             }
             
             // Check if patient exists
             $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE id = ?");
             $stmt->execute([$id]);
             if (!$stmt->fetch()) {
-                json_err('Patient nicht gefunden', 404);
+                api_error('Patient nicht gefunden', 404);
             }
             
             // Get update data
@@ -325,7 +322,7 @@ try {
             $medications = trim($input['medications'] ?? '');
             
             if (!$patient_name) {
-                json_err('Patientenname ist erforderlich', 400);
+                api_error('Patientenname ist erforderlich', 400);
             }
             
             // Update patient
@@ -355,7 +352,7 @@ try {
             $stmt->execute([$id]);
             $patient = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            json_ok(['patient' => $patient, 'message' => 'Patient erfolgreich aktualisiert']);
+            api_success(['patient' => $patient, 'message' => 'Patient erfolgreich aktualisiert']);
             break;
             
         case 'delete':
@@ -369,7 +366,7 @@ try {
             $id = intval($input['id'] ?? $_GET['id'] ?? 0);
             
             if (!$id) {
-                json_err('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt', 400);
             }
             
             // Begin transaction
@@ -383,7 +380,7 @@ try {
                 
                 if ($result['count'] > 0) {
                     $pdo->rollBack();
-                    json_err("Patient kann nicht gelöscht werden - hat noch " . $result['count'] . " Rechnung(en)", 400);
+                    api_error("Patient kann nicht gelöscht werden - hat noch " . $result['count'] . " Rechnung(en)", 400);
                 }
                 
                 // Delete patient (cascades to appointments, treatments, notes)
@@ -392,7 +389,7 @@ try {
                 
                 $pdo->commit();
                 
-                json_ok(['message' => 'Patient erfolgreich gelöscht']);
+                api_success(['message' => 'Patient erfolgreich gelöscht']);
                 
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -401,15 +398,15 @@ try {
             break;
             
         default:
-            json_err("Unbekannte Aktion: " . $action, 400);
+            api_error("Unbekannte Aktion: " . $action, 400);
     }
     
 } catch (PDOException $e) {
     error_log("Patients API PDO Error (" . $action . "): " . $e->getMessage());
-    json_err('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
 } catch (Throwable $e) {
     error_log("Patients API Error (" . $action . "): " . $e->getMessage());
-    json_err('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
 }
 
 // Should never reach here
