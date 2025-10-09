@@ -3,144 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patients Module Test</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Patient API Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #8b5cf6;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .patient-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #fafafa;
+        }
+        .patient-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4b5563;
+        }
+        .owner-info {
+            color: #8b5cf6;
+            margin-top: 5px;
+        }
+        .no-owner {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #7c3aed;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8 text-purple-600">Patients Module Test Suite</h1>
-        
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
-            <div class="space-y-4">
-                <button onclick="testIntegrity()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-                    Run Integrity Check
-                </button>
-                <button onclick="testList()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Test List Patients
-                </button>
-                <button onclick="testCreate()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                    Test Create Patient
-                </button>
-                <button onclick="testOwnersList()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                    Test List Owners
-                </button>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4">Test Results</h2>
-            <div id="results" class="space-y-4">
-                <p class="text-gray-500">Click a test button to see results...</p>
-            </div>
-        </div>
+<body>
+    <h1>🐾 Tierphysio Manager - Patient API Test</h1>
+    
+    <div class="test-section">
+        <h2>API Endpoint Tests</h2>
+        <button onclick="testAPI('api/patients.php')">Test Haupt-API</button>
+        <button onclick="testAPI('api/patients_mock.php')">Test Mock-API</button>
+        <button onclick="testAPI('api_patients.php')">Test Wrapper-API</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Raw JSON Response</h2>
+        <pre id="json-output"></pre>
     </div>
 
     <script>
-        const apiBase = '/public/api';
-        
-        function displayResult(title, data, isError = false) {
-            const resultsDiv = document.getElementById('results');
-            const resultClass = isError ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200';
-            const titleClass = isError ? 'text-red-800' : 'text-green-800';
+        async function testAPI(endpoint) {
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+            const jsonEl = document.getElementById('json-output');
             
-            resultsDiv.innerHTML = `
-                <div class="border rounded-lg p-4 ${resultClass}">
-                    <h3 class="font-semibold ${titleClass} mb-2">${title}</h3>
-                    <pre class="text-sm overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
-                </div>
-            `;
-        }
-        
-        async function testIntegrity() {
+            statusEl.innerHTML = '<p>Testing endpoint: <strong>' + endpoint + '?action=list</strong></p>';
+            resultsEl.innerHTML = '<p>Loading...</p>';
+            jsonEl.textContent = '';
+            
             try {
-                const response = await fetch(`${apiBase}/integrity_patients.php`);
-                const data = await response.json();
+                const response = await fetch(endpoint + '?action=list');
+                const text = await response.text();
                 
-                if (data.status === 'success') {
-                    displayResult('✅ Integrity Check Passed', data.data);
-                } else {
-                    displayResult('❌ Integrity Check Failed', data, true);
+                // Try to parse as JSON
+                let data;
+                try {
+                    data = JSON.parse(text);
+                    jsonEl.textContent = JSON.stringify(data, null, 2);
+                } catch (parseError) {
+                    statusEl.innerHTML += '<p class="error">❌ Response is not valid JSON!</p>';
+                    jsonEl.textContent = text;
+                    return;
                 }
-            } catch (error) {
-                displayResult('❌ Error running integrity check', {error: error.message}, true);
-            }
-        }
-        
-        async function testList() {
-            try {
-                const response = await fetch(`${apiBase}/patients.php?action=list`);
-                const data = await response.json();
                 
-                if (data.status === 'success') {
-                    displayResult('✅ List Patients Success', data.data);
-                } else {
-                    displayResult('❌ List Patients Failed', data, true);
-                }
-            } catch (error) {
-                displayResult('❌ Error listing patients', {error: error.message}, true);
-            }
-        }
-        
-        async function testCreate() {
-            try {
-                const formData = new FormData();
-                formData.append('name', 'Test Patient ' + Date.now());
-                formData.append('species', 'dog');
-                formData.append('breed', 'Labrador');
-                formData.append('owner_first_name', 'Test');
-                formData.append('owner_last_name', 'Owner ' + Date.now());
-                formData.append('owner_phone', '+49 123 ' + Math.floor(Math.random() * 1000000));
-                formData.append('owner_email', 'test' + Date.now() + '@example.com');
-                
-                const response = await fetch(`${apiBase}/patients.php?action=create`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    displayResult('✅ Create Patient Success', data.data);
+                // Check response structure
+                if (data.ok === true) {
+                    statusEl.innerHTML += '<p class="success">✅ API responded with ok=true</p>';
                     
-                    // Optionally delete the test patient
-                    if (data.data.patient_id) {
-                        setTimeout(async () => {
-                            const deleteForm = new FormData();
-                            deleteForm.append('id', data.data.patient_id);
-                            await fetch(`${apiBase}/patients.php?action=delete`, {
-                                method: 'POST',
-                                body: deleteForm
-                            });
-                        }, 5000);
+                    if (data.items && Array.isArray(data.items)) {
+                        statusEl.innerHTML += '<p class="success">✅ Response contains items array</p>';
+                        statusEl.innerHTML += '<p>Found ' + data.items.length + ' patients</p>';
+                        
+                        // Display patients
+                        let html = '<h3>Patients with Owners:</h3>';
+                        data.items.forEach(patient => {
+                            html += '<div class="patient-card">';
+                            html += '<div class="patient-name">🐾 ' + (patient.patient_name || patient.name || 'Unknown') + '</div>';
+                            html += '<div>Species: ' + (patient.species || 'unknown') + '</div>';
+                            
+                            if (patient.owner_name && patient.owner_name !== '—') {
+                                html += '<div class="owner-info">👤 Owner: ' + patient.owner_name + '</div>';
+                                if (patient.owner_customer_number) {
+                                    html += '<div>Customer #: ' + patient.owner_customer_number + '</div>';
+                                }
+                            } else {
+                                html += '<div class="no-owner">No owner assigned</div>';
+                            }
+                            html += '</div>';
+                        });
+                        
+                        resultsEl.innerHTML = html;
+                        
+                        // Check for owner_name field
+                        const hasOwnerName = data.items.every(item => 'owner_name' in item);
+                        if (hasOwnerName) {
+                            statusEl.innerHTML += '<p class="success">✅ All items have owner_name field</p>';
+                        } else {
+                            statusEl.innerHTML += '<p class="error">❌ Some items missing owner_name field</p>';
+                        }
+                        
+                    } else {
+                        statusEl.innerHTML += '<p class="error">❌ No items array in response</p>';
                     }
                 } else {
-                    displayResult('❌ Create Patient Failed', data, true);
+                    statusEl.innerHTML += '<p class="error">❌ API responded with error</p>';
+                    if (data.error) {
+                        statusEl.innerHTML += '<p>Error message: ' + data.error + '</p>';
+                    }
                 }
-            } catch (error) {
-                displayResult('❌ Error creating patient', {error: error.message}, true);
-            }
-        }
-        
-        async function testOwnersList() {
-            try {
-                const response = await fetch(`${apiBase}/owners.php?action=list`);
-                const data = await response.json();
                 
-                if (data.status === 'success') {
-                    displayResult('✅ List Owners Success', data.data);
-                } else {
-                    displayResult('❌ List Owners Failed', data, true);
-                }
             } catch (error) {
-                displayResult('❌ Error listing owners', {error: error.message}, true);
+                statusEl.innerHTML += '<p class="error">❌ Failed to fetch: ' + error.message + '</p>';
+                jsonEl.textContent = 'Error: ' + error.message;
             }
         }
         
-        // Auto-run integrity check on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(testIntegrity, 500);
-        });
+        // Test main API on load
+        window.onload = () => {
+            testAPI('api/patients.php');
+        };
     </script>
 </body>
 </html>
