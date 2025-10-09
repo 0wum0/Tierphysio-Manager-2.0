@@ -192,22 +192,8 @@ class Auth {
         $this->user = null;
     }
     
-    /**
-     * Get CSRF token
-     */
-    public function getCSRFToken() {
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
-    }
-    
-    /**
-     * Verify CSRF token
-     */
-    public function verifyCSRFToken($token) {
-        return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
-    }
+    // FIRST DUPLICATE REMOVED - using the later improved definition
+    // The getCSRFToken() and verifyCSRFToken() methods are defined below with better session handling
     
     /**
      * Check permission
@@ -264,13 +250,7 @@ class Auth {
      * Get CSRF Token (alias for generateCSRFToken for compatibility)
      */
     public function getCSRFToken() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
+        return $this->generateCSRFToken();
     }
     
     /**
