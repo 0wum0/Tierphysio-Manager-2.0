@@ -18,8 +18,12 @@ use Twig\Environment;
  */
 function render_template($path, $data = []) {
     try {
-        // Setup Twig loader
-        $loader = new FilesystemLoader(__DIR__ . '/../templates');
+        // Setup Twig loader with multiple search paths
+        $loader = new FilesystemLoader([
+            __DIR__ . '/../templates',
+            __DIR__ . '/../templates/layouts',
+            __DIR__ . '/../templates/partials'
+        ]);
         
         // Setup Twig environment
         $twig = new Environment($loader, [
