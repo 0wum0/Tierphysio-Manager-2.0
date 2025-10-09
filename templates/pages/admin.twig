@@ -1,306 +1,829 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}Admin-Panel - TierPhysio Manager 2.0{% endblock %}
+
+{% block styles %}
+<style>
+    /* Glass Morphism Styles */
+    .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .glass-dark {
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .gradient-bg {
+        background: linear-gradient(135deg, #9b5de5 0%, #7C4DFF 50%, #6c63ff 100%);
+    }
+    
+    .gradient-text {
+        background: linear-gradient(135deg, #9b5de5 0%, #7C4DFF 50%, #6c63ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .hover-glow:hover {
+        box-shadow: 0 0 20px rgba(155, 93, 229, 0.4);
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card {
+        @apply glass rounded-2xl p-6 shadow-xl hover-glow;
+    }
+    
+    .section-card {
+        @apply glass rounded-2xl p-6 shadow-xl;
+    }
+    
+    /* Chart Container */
+    .chart-container {
+        position: relative;
+        height: 200px;
+    }
+    
+    /* Tab Navigation */
+    .tab-nav {
+        @apply flex space-x-1 p-1 glass rounded-xl;
+    }
+    
+    .tab-btn {
+        @apply flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-200;
+    }
+    
+    .tab-btn.active {
+        @apply bg-white/20 text-white shadow-lg;
+    }
+    
+    .tab-btn:not(.active) {
+        @apply text-white/70 hover:text-white hover:bg-white/10;
+    }
+    
+    /* Form Controls */
+    .form-input {
+        @apply w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+    }
+    
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2;
+    }
+    
+    /* Data Table */
+    .data-table {
+        @apply w-full;
+    }
+    
+    .data-table thead {
+        @apply bg-white/10 backdrop-blur-sm;
+    }
+    
+    .data-table th {
+        @apply px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider;
+    }
+    
+    .data-table tbody tr {
+        @apply hover:bg-white/5 transition-colors duration-150;
+    }
+    
+    .data-table tbody tr:nth-child(even) {
+        @apply bg-white/5;
+    }
+    
+    .data-table td {
+        @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <h1 class="mt-4">Admin-Panel</h1>
-    
-    <!-- Tab Navigation -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if action == 'overview' %}active{% endif %}" href="?action=overview">
-                <i class="fas fa-dashboard"></i> Übersicht
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if action == 'users' %}active{% endif %}" href="?action=users">
-                <i class="fas fa-users"></i> Benutzer
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if action == 'settings' %}active{% endif %}" href="?action=settings">
-                <i class="fas fa-cog"></i> Einstellungen
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if action == 'backup' %}active{% endif %}" href="?action=backup">
-                <i class="fas fa-download"></i> Backup
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if action == 'logs' %}active{% endif %}" href="?action=logs">
-                <i class="fas fa-list"></i> Aktivitäts-Log
-            </a>
-        </li>
-    </ul>
-    
-    <!-- Tab Content -->
-    <div class="tab-content">
-        {% if action == 'overview' %}
-        <!-- Overview Tab -->
-        <div class="row">
-            <div class="col-xl-3 col-md-6">
-                <div class="card bg-primary text-white mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <div class="text-white-50 small">Benutzer</div>
-                                <div class="h3">{{ stats.users }}</div>
-                            </div>
-                            <i class="fas fa-users fa-3x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
+<div x-data="adminPanel()" x-init="init()" class="min-h-screen gradient-bg">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold text-white mb-2">Admin-Panel</h1>
+                <p class="text-white/70">TierPhysio Manager 2.0 - Systemverwaltung</p>
             </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="card bg-success text-white mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <div class="text-white-50 small">Patienten</div>
-                                <div class="h3">{{ stats.patients }}</div>
-                            </div>
-                            <i class="fas fa-paw fa-3x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="card bg-warning text-white mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <div class="text-white-50 small">Behandlungen</div>
-                                <div class="h3">{{ stats.treatments }}</div>
-                            </div>
-                            <i class="fas fa-hand-holding-medical fa-3x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="card bg-info text-white mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <div class="text-white-50 small">Rechnungen</div>
-                                <div class="h3">{{ stats.invoices }}</div>
-                            </div>
-                            <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Recent Activities -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-clock me-1"></i>
-                Letzte Aktivitäten
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Zeitpunkt</th>
-                                <th>Benutzer</th>
-                                <th>Aktion</th>
-                                <th>Entität</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for activity in recent_activities %}
-                            <tr>
-                                <td>{{ activity.created_at|date('d.m.Y H:i') }}</td>
-                                <td>{{ activity.first_name }} {{ activity.last_name }}</td>
-                                <td>{{ activity.action }}</td>
-                                <td>{{ activity.entity_type }} #{{ activity.entity_id }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center">Keine Aktivitäten vorhanden</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        {% elseif action == 'users' %}
-        <!-- Users Tab -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-users me-1"></i>Benutzerverwaltung</span>
-                <button class="btn btn-primary btn-sm" onclick="addUser()">
-                    <i class="fas fa-plus"></i> Neuer Benutzer
+            
+            <!-- Dark/Light Mode Toggle -->
+            <div class="flex items-center space-x-4">
+                <button @click="toggleDarkMode()" class="glass p-3 rounded-lg text-white hover-glow">
+                    <svg x-show="!darkMode" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                    <svg x-show="darkMode" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </button>
+                
+                <button @click="refreshData()" class="glass px-4 py-2 rounded-lg text-white hover-glow">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Aktualisieren
                 </button>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Benutzername</th>
-                                <th>Name</th>
-                                <th>E-Mail</th>
-                                <th>Rolle</th>
-                                <th>Status</th>
-                                <th>Letzter Login</th>
-                                <th>Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for user_item in users %}
-                            <tr>
-                                <td>{{ user_item.id }}</td>
-                                <td>{{ user_item.username }}</td>
-                                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
-                                <td>{{ user_item.email }}</td>
-                                <td>
-                                    <span class="badge bg-{{ user_item.role == 'admin' ? 'danger' : (user_item.role == 'employee' ? 'primary' : 'secondary') }}">
-                                        {{ user_item.role }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ user_item.is_active ? 'success' : 'danger' }}">
-                                        {{ user_item.is_active ? 'Aktiv' : 'Inaktiv' }}
-                                    </span>
-                                </td>
-                                <td>{{ user_item.last_login ? user_item.last_login|date('d.m.Y H:i') : '-' }}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="editUser({{ user_item.id }})">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    {% if user_item.id != user.id %}
-                                    <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user_item.id }})">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
         
-        {% elseif action == 'settings' %}
-        <!-- Settings Tab -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-cog me-1"></i>System-Einstellungen
-            </div>
-            <div class="card-body">
-                {% for category, settings in settings_grouped %}
-                <h5 class="border-bottom pb-2 mb-3">{{ category|capitalize }}</h5>
-                <div class="row mb-4">
-                    {% for setting in settings %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ setting.description ?: setting.key }}</label>
-                        {% if setting.type == 'boolean' %}
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="setting_{{ setting.id }}" 
-                                   {% if setting.value == '1' %}checked{% endif %}
-                                   {% if setting.is_system %}disabled{% endif %}>
-                            <label class="form-check-label" for="setting_{{ setting.id }}">
-                                Aktiviert
-                            </label>
+        <!-- Tab Navigation -->
+        <div class="tab-nav mb-6">
+            <button @click="activeTab = 'overview'" 
+                    :class="{'active': activeTab === 'overview'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Übersicht
+            </button>
+            
+            <button @click="activeTab = 'users'" 
+                    :class="{'active': activeTab === 'users'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                Benutzer
+            </button>
+            
+            <button @click="activeTab = 'settings'" 
+                    :class="{'active': activeTab === 'settings'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Einstellungen
+            </button>
+            
+            <button @click="activeTab = 'database'" 
+                    :class="{'active': activeTab === 'database'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                </svg>
+                Datenbank
+            </button>
+            
+            <button @click="activeTab = 'logs'" 
+                    :class="{'active': activeTab === 'logs'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Logs
+            </button>
+            
+            <button @click="activeTab = 'design'" 
+                    :class="{'active': activeTab === 'design'}" 
+                    class="tab-btn">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                </svg>
+                Design
+            </button>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Overview Tab -->
+            <div x-show="activeTab === 'overview'" x-transition>
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-white/70 text-sm">Patienten</p>
+                                <p class="text-3xl font-bold text-white" x-text="stats.patients || '0'"></p>
+                            </div>
+                            <div class="p-3 bg-white/20 rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                </svg>
+                            </div>
                         </div>
-                        {% elseif setting.type == 'number' %}
-                        <input type="number" class="form-control" value="{{ setting.value }}"
-                               {% if setting.is_system %}readonly{% endif %}>
-                        {% else %}
-                        <input type="text" class="form-control" value="{{ setting.value }}"
-                               {% if setting.is_system %}readonly{% endif %}>
-                        {% endif %}
-                        {% if setting.is_system %}
-                        <small class="text-muted">System-Einstellung (nicht änderbar)</small>
-                        {% endif %}
+                        <div class="flex items-center text-green-300 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>+12% diese Woche</span>
+                        </div>
                     </div>
-                    {% endfor %}
+                    
+                    <div class="stat-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-white/70 text-sm">Termine</p>
+                                <p class="text-3xl font-bold text-white" x-text="stats.appointments || '0'"></p>
+                            </div>
+                            <div class="p-3 bg-white/20 rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-yellow-300 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>48 diese Woche</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-white/70 text-sm">Umsatz</p>
+                                <p class="text-3xl font-bold text-white">€<span x-text="stats.revenue || '0'"></span></p>
+                            </div>
+                            <div class="p-3 bg-white/20 rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-green-300 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>+8.5% vs. Vormonat</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-white/70 text-sm">Benutzer</p>
+                                <p class="text-3xl font-bold text-white" x-text="stats.users || '0'"></p>
+                            </div>
+                            <div class="p-3 bg-white/20 rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-blue-300 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span x-text="stats.active_users || '0'"></span> aktiv
+                        </div>
+                    </div>
                 </div>
-                {% endfor %}
                 
-                <button class="btn btn-primary">Einstellungen speichern</button>
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Line Chart -->
+                    <div class="section-card">
+                        <h3 class="text-lg font-semibold text-white mb-4">Behandlungen (7 Tage)</h3>
+                        <div class="chart-container">
+                            <canvas id="treatmentChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Donut Chart -->
+                    <div class="section-card">
+                        <h3 class="text-lg font-semibold text-white mb-4">Behandlungsarten</h3>
+                        <div class="chart-container">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="section-card">
+                    <h3 class="text-lg font-semibold text-white mb-4">Letzte Aktivitäten</h3>
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Zeit</th>
+                                    <th>Benutzer</th>
+                                    <th>Aktion</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="activity in recentActivities" :key="activity.id">
+                                    <tr>
+                                        <td x-text="formatDate(activity.created_at)"></td>
+                                        <td x-text="activity.user_name"></td>
+                                        <td>
+                                            <span class="px-2 py-1 text-xs rounded-full"
+                                                  :class="{
+                                                      'bg-green-100 text-green-800': activity.action === 'create',
+                                                      'bg-blue-100 text-blue-800': activity.action === 'update',
+                                                      'bg-red-100 text-red-800': activity.action === 'delete',
+                                                      'bg-gray-100 text-gray-800': !['create', 'update', 'delete'].includes(activity.action)
+                                                  }"
+                                                  x-text="activity.action"></span>
+                                        </td>
+                                        <td x-text="activity.entity_type + ' #' + activity.entity_id"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        {% elseif action == 'backup' %}
-        <!-- Backup Tab -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-download me-1"></i>Backup & Wiederherstellung
+            
+            <!-- Users Tab -->
+            <div x-show="activeTab === 'users'" x-transition>
+                <div class="section-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-white">Benutzerverwaltung</h3>
+                        <button @click="openUserModal()" class="glass px-4 py-2 rounded-lg text-white hover-glow">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Neuer Benutzer
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Benutzername</th>
+                                    <th>Name</th>
+                                    <th>E-Mail</th>
+                                    <th>Rolle</th>
+                                    <th>Status</th>
+                                    <th>Letzter Login</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="user in users" :key="user.id">
+                                    <tr>
+                                        <td x-text="user.id"></td>
+                                        <td x-text="user.username"></td>
+                                        <td x-text="user.first_name + ' ' + user.last_name"></td>
+                                        <td x-text="user.email"></td>
+                                        <td>
+                                            <span class="px-2 py-1 text-xs rounded-full"
+                                                  :class="{
+                                                      'bg-purple-100 text-purple-800': user.role === 'admin',
+                                                      'bg-blue-100 text-blue-800': user.role === 'employee',
+                                                      'bg-gray-100 text-gray-800': user.role === 'viewer'
+                                                  }"
+                                                  x-text="user.role"></span>
+                                        </td>
+                                        <td>
+                                            <span class="px-2 py-1 text-xs rounded-full"
+                                                  :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                                  x-text="user.is_active ? 'Aktiv' : 'Inaktiv'"></span>
+                                        </td>
+                                        <td x-text="user.last_login ? formatDate(user.last_login) : '-'"></td>
+                                        <td class="space-x-2">
+                                            <button @click="editUser(user)" class="text-blue-400 hover:text-blue-300">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                            </button>
+                                            <button @click="toggleUserStatus(user)" class="text-yellow-400 hover:text-yellow-300">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                </svg>
+                                            </button>
+                                            <button @click="resetPassword(user)" class="text-green-400 hover:text-green-300">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> {{ message|default('Backup-Funktionalität wird in einer späteren Version implementiert.') }}
+            
+            <!-- Settings Tab -->
+            <div x-show="activeTab === 'settings'" x-transition>
+                <div class="section-card">
+                    <h3 class="text-xl font-semibold text-white mb-6">Praxis-Einstellungen</h3>
+                    
+                    <form @submit.prevent="saveSettings()">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- General Settings -->
+                            <div>
+                                <h4 class="text-lg font-medium text-white/90 mb-4">Allgemein</h4>
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="form-label">Praxisname</label>
+                                        <input type="text" x-model="settings.practice_name" class="form-input">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">E-Mail</label>
+                                        <input type="email" x-model="settings.practice_email" class="form-input">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Telefon</label>
+                                        <input type="tel" x-model="settings.practice_phone" class="form-input">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Adresse</label>
+                                        <textarea x-model="settings.practice_address" rows="3" class="form-input"></textarea>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Website</label>
+                                        <input type="url" x-model="settings.practice_website" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- System Settings -->
+                            <div>
+                                <h4 class="text-lg font-medium text-white/90 mb-4">System</h4>
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="form-label">Währung</label>
+                                        <select x-model="settings.currency" class="form-input">
+                                            <option value="EUR">EUR (€)</option>
+                                            <option value="USD">USD ($)</option>
+                                            <option value="GBP">GBP (£)</option>
+                                            <option value="CHF">CHF (Fr.)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Sprache</label>
+                                        <select x-model="settings.language" class="form-input">
+                                            <option value="de">Deutsch</option>
+                                            <option value="en">English</option>
+                                            <option value="fr">Français</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Zeitzone</label>
+                                        <select x-model="settings.timezone" class="form-input">
+                                            <option value="Europe/Berlin">Europe/Berlin</option>
+                                            <option value="Europe/Vienna">Europe/Vienna</option>
+                                            <option value="Europe/Zurich">Europe/Zurich</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label">Logo-Upload</label>
+                                        <input type="file" @change="uploadLogo($event)" class="form-input">
+                                        <div x-show="settings.practice_logo" class="mt-2">
+                                            <img :src="settings.practice_logo" alt="Logo" class="h-20 rounded">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end space-x-4">
+                            <button type="button" @click="loadSettings()" class="glass px-6 py-2 rounded-lg text-white/70 hover:text-white">
+                                Zurücksetzen
+                            </button>
+                            <button type="submit" class="glass px-6 py-2 rounded-lg text-white hover-glow">
+                                Speichern
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Database Tab -->
+            <div x-show="activeTab === 'database'" x-transition>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Database Status -->
+                    <div class="section-card">
+                        <h3 class="text-lg font-semibold text-white mb-4">Datenbank-Status</h3>
+                        
+                        <div class="space-y-3">
+                            <template x-for="table in databaseTables" :key="table.name">
+                                <div class="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                                    <div>
+                                        <p class="text-white font-medium" x-text="table.name"></p>
+                                        <p class="text-white/60 text-sm">
+                                            <span x-text="table.rows"></span> Einträge • 
+                                            <span x-text="table.size"></span>
+                                        </p>
+                                    </div>
+                                    <div class="text-green-400">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Backup & Migration -->
+                    <div class="section-card">
+                        <h3 class="text-lg font-semibold text-white mb-4">Backup & Migration</h3>
+                        
+                        <div class="space-y-4">
+                            <button @click="createBackup()" class="w-full glass px-4 py-3 rounded-lg text-white text-left hover-glow">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="font-medium">Backup erstellen</p>
+                                            <p class="text-sm text-white/60">Vollständige Datensicherung</p>
+                                        </div>
+                                    </div>
+                                    <svg class="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                            
+                            <button @click="runMigration()" class="w-full glass px-4 py-3 rounded-lg text-white text-left hover-glow">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="font-medium">Migration ausführen</p>
+                                            <p class="text-sm text-white/60">Datenbankstruktur aktualisieren</p>
+                                        </div>
+                                    </div>
+                                    <svg class="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                            
+                            <!-- Last Backup Info -->
+                            <div class="p-3 bg-white/5 rounded-lg">
+                                <p class="text-white/60 text-sm">Letztes Backup</p>
+                                <p class="text-white" x-text="lastBackup || 'Noch kein Backup erstellt'"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logs Tab -->
+            <div x-show="activeTab === 'logs'" x-transition>
+                <div class="section-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-white">System-Logs</h3>
+                        
+                        <div class="flex items-center space-x-4">
+                            <!-- Filter -->
+                            <select @change="filterLogs()" x-model="logFilter" class="form-input">
+                                <option value="">Alle Aktionen</option>
+                                <option value="create">Erstellt</option>
+                                <option value="update">Aktualisiert</option>
+                                <option value="delete">Gelöscht</option>
+                                <option value="login">Login</option>
+                            </select>
+                            
+                            <button @click="loadLogs()" class="glass px-4 py-2 rounded-lg text-white hover-glow">
+                                Aktualisieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Zeit</th>
+                                    <th>Benutzer</th>
+                                    <th>Aktion</th>
+                                    <th>Entität</th>
+                                    <th>IP-Adresse</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="log in filteredLogs" :key="log.id">
+                                    <tr>
+                                        <td x-text="formatDate(log.created_at)"></td>
+                                        <td x-text="log.user_name"></td>
+                                        <td>
+                                            <span class="px-2 py-1 text-xs rounded-full"
+                                                  :class="{
+                                                      'bg-green-100 text-green-800': log.action === 'create',
+                                                      'bg-blue-100 text-blue-800': log.action === 'update',
+                                                      'bg-red-100 text-red-800': log.action === 'delete',
+                                                      'bg-yellow-100 text-yellow-800': log.action === 'login'
+                                                  }"
+                                                  x-text="log.action"></span>
+                                        </td>
+                                        <td x-text="log.entity_type + (log.entity_id ? ' #' + log.entity_id : '')"></td>
+                                        <td x-text="log.ip_address"></td>
+                                        <td>
+                                            <button @click="showLogDetails(log)" class="text-blue-400 hover:text-blue-300">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Design Tab -->
+            <div x-show="activeTab === 'design'" x-transition>
+                <div class="section-card">
+                    <h3 class="text-xl font-semibold text-white mb-6">Design-Anpassungen</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Color Settings -->
+                        <div>
+                            <h4 class="text-lg font-medium text-white/90 mb-4">Farbschema</h4>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="form-label">Primärfarbe</label>
+                                    <div class="flex items-center space-x-3">
+                                        <input type="color" x-model="theme.primaryColor" @change="applyTheme()" class="h-10 w-20">
+                                        <input type="text" x-model="theme.primaryColor" class="form-input flex-1">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="form-label">Sekundärfarbe</label>
+                                    <div class="flex items-center space-x-3">
+                                        <input type="color" x-model="theme.secondaryColor" @change="applyTheme()" class="h-10 w-20">
+                                        <input type="text" x-model="theme.secondaryColor" class="form-input flex-1">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="form-label">Gradient-Stil</label>
+                                    <select x-model="theme.gradientStyle" @change="applyTheme()" class="form-input">
+                                        <option value="lilac">Lilac (Standard)</option>
+                                        <option value="purple">Purple</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="green">Green</option>
+                                        <option value="sunset">Sunset</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="form-label">Akzentfarbe</label>
+                                    <div class="flex items-center space-x-3">
+                                        <input type="color" x-model="theme.accentColor" @change="applyTheme()" class="h-10 w-20">
+                                        <input type="text" x-model="theme.accentColor" class="form-input flex-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div>
+                            <h4 class="text-lg font-medium text-white/90 mb-4">Vorschau</h4>
+                            
+                            <div class="p-6 bg-white/5 rounded-lg">
+                                <div class="space-y-4">
+                                    <div class="p-4 rounded-lg" :style="`background: linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`">
+                                        <p class="text-white font-medium">Gradient-Beispiel</p>
+                                    </div>
+                                    
+                                    <button class="w-full glass px-4 py-2 rounded-lg text-white hover-glow">
+                                        Beispiel-Button
+                                    </button>
+                                    
+                                    <div class="glass p-4 rounded-lg">
+                                        <p class="text-white">Glass-Effekt Beispiel</p>
+                                        <p class="text-white/60 text-sm">Mit Blur und Transparenz</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end space-x-4">
+                                <button @click="resetTheme()" class="glass px-6 py-2 rounded-lg text-white/70 hover:text-white">
+                                    Standard wiederherstellen
+                                </button>
+                                <button @click="saveTheme()" class="glass px-6 py-2 rounded-lg text-white hover-glow">
+                                    Design speichern
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        {% elseif action == 'logs' %}
-        <!-- Logs Tab -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-list me-1"></i>System-Aktivitäten
+    </div>
+    
+    <!-- User Modal -->
+    <div x-show="showUserModal" x-transition 
+         @click.away="showUserModal = false"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+            <h3 class="text-xl font-semibold mb-4" x-text="editingUser ? 'Benutzer bearbeiten' : 'Neuer Benutzer'"></h3>
+            
+            <form @submit.prevent="saveUser()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" x-model="userForm.username" required class="form-input">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">Vorname</label>
+                            <input type="text" x-model="userForm.first_name" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="form-label">Nachname</label>
+                            <input type="text" x-model="userForm.last_name" required class="form-input">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">E-Mail</label>
+                        <input type="email" x-model="userForm.email" required class="form-input">
+                    </div>
+                    
+                    <div x-show="!editingUser">
+                        <label class="form-label">Passwort</label>
+                        <input type="password" x-model="userForm.password" :required="!editingUser" class="form-input">
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Rolle</label>
+                        <select x-model="userForm.role" class="form-input">
+                            <option value="admin">Admin</option>
+                            <option value="employee">Mitarbeiter</option>
+                            <option value="viewer">Betrachter</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button type="button" @click="showUserModal = false" class="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+                        Abbrechen
+                    </button>
+                    <button type="submit" class="px-6 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700">
+                        Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Progress Modal -->
+    <div x-show="showProgressModal" x-transition
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p class="text-lg font-medium" x-text="progressMessage"></p>
+                <p class="text-sm text-gray-500 mt-2" x-text="progressDetail"></p>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Zeitpunkt</th>
-                                <th>Benutzer</th>
-                                <th>Aktion</th>
-                                <th>Entität</th>
-                                <th>IP-Adresse</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for log in logs %}
-                            <tr>
-                                <td>{{ log.created_at|date('d.m.Y H:i:s') }}</td>
-                                <td>{{ log.first_name }} {{ log.last_name }}</td>
-                                <td>{{ log.action }}</td>
-                                <td>{{ log.entity_type }} {% if log.entity_id %}#{{ log.entity_id }}{% endif %}</td>
-                                <td>{{ log.ip_address }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center">Keine Logs vorhanden</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div x-show="showToast" x-transition
+         class="fixed top-4 right-4 z-50">
+        <div class="glass px-6 py-4 rounded-lg shadow-xl max-w-sm"
+             :class="{
+                 'border-green-500': toastType === 'success',
+                 'border-red-500': toastType === 'error',
+                 'border-yellow-500': toastType === 'warning'
+             }">
+            <div class="flex items-center">
+                <svg x-show="toastType === 'success'" class="w-6 h-6 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+                <svg x-show="toastType === 'error'" class="w-6 h-6 text-red-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div>
+                    <p class="font-medium text-white" x-text="toastMessage"></p>
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 
-<script>
-function addUser() {
-    // Placeholder für Benutzer hinzufügen
-    alert('Benutzer hinzufügen - Wird implementiert');
-}
-
-function editUser(id) {
-    // Placeholder für Benutzer bearbeiten
-    alert('Benutzer bearbeiten - Wird implementiert');
-}
-
-function deleteUser(id) {
-    if (confirm('Möchten Sie diesen Benutzer wirklich löschen?')) {
-        // Placeholder für Benutzer löschen
-        alert('Benutzer löschen - Wird implementiert');
-    }
-}
-</script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/public/js/admin.js"></script>
 {% endblock %}
