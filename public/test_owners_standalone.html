@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Owners Standalone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 p-8">
+    <h1 class="text-2xl font-bold mb-4">🐾 Test Owners Page (Standalone)</h1>
+    
+    <div class="space-y-4">
+        <div class="bg-gray-800 p-4 rounded">
+            <h2 class="text-xl mb-2">Test Links:</h2>
+            <ul class="space-y-2">
+                <li><a href="/public/owners.php" class="text-blue-400 hover:underline">→ Owners List</a></li>
+                <li><a href="/public/owners.php?action=view&id=1" class="text-blue-400 hover:underline">→ View Owner ID 1</a></li>
+                <li><a href="/public/owners.php?search=Max" class="text-blue-400 hover:underline">→ Search for "Max"</a></li>
+            </ul>
+        </div>
+        
+        <div class="bg-gray-800 p-4 rounded">
+            <h2 class="text-xl mb-2">Test Update Form:</h2>
+            <form method="post" action="/public/owners.php?action=update" class="space-y-2">
+                <input type="hidden" name="id" value="1">
+                <div class="grid grid-cols-2 gap-2">
+                    <input name="first_name" placeholder="Vorname" value="Test" class="bg-gray-700 p-2 rounded">
+                    <input name="last_name" placeholder="Nachname" value="User" class="bg-gray-700 p-2 rounded">
+                    <input name="email" placeholder="E-Mail" value="test@example.com" class="bg-gray-700 p-2 rounded">
+                    <input name="phone" placeholder="Telefon" value="0123456789" class="bg-gray-700 p-2 rounded">
+                </div>
+                <button type="submit" class="bg-green-600 px-4 py-2 rounded hover:bg-green-700">Update Test</button>
+            </form>
+        </div>
+        
+        <div class="bg-gray-800 p-4 rounded">
+            <h2 class="text-xl mb-2">System Info:</h2>
+            <ul class="space-y-1 text-sm">
+                <li>✅ owners.php umgeschrieben auf PDO + Standalone Template</li>
+                <li>✅ template_standalone.php erstellt (kein vendor/autoload.php)</li>
+                <li>✅ owners.twig Template als PHP-Funktion integriert</li>
+                <li>✅ owner_view.twig Template als PHP-Funktion integriert</li>
+                <li>✅ owners.js JavaScript erstellt</li>
+                <li>✅ Verwendet StandaloneAuth Klasse</li>
+                <li>✅ Verwendet get_pdo() aus db.php</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Test page loaded');
+        // Load owners.js
+        const script = document.createElement('script');
+        script.src = '/public/js/owners.js';
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>
