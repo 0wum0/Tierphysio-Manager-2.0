@@ -83,7 +83,7 @@
                         <span x-show="patient.birth_date" x-text="' • ' + calculateAge(patient.birth_date)"></span>
                     </p>
                     <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">
-                        Besitzer: <span x-text="patient.owner_first_name + ' ' + patient.owner_last_name"></span>
+                        Besitzer: <span x-text="patient.owner_full_name || '—'"></span>
                     </p>
                     <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/20">
                         <div class="flex space-x-2">
@@ -432,12 +432,22 @@ function patientsManager() {
                     species: this.speciesFilter
                 });
 
-                const response = await fetch(`/public/api/patients.php?${params}`);
+                const response = await fetch(`/api/patients.php?${params}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Invalid JSON response');
+                }
+                
                 const data = await response.json();
                 
-                if (data.status === 'success') {
-                    // Data is directly in data.data array
-                    this.patients = data.data || [];
+                if (data.ok) {
+                    // Data is in data.data.items array
+                    this.patients = data.data?.items || [];
                     
                     // Animate cards on load
                     this.$nextTick(() => {
@@ -452,10 +462,12 @@ function patientsManager() {
                             });
                         }
                     });
+                } else {
+                    throw new Error(data.error || 'Unbekannter Fehler');
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Patienten:', error);
-                this.showNotification('Fehler beim Laden der Patienten', 'error');
+                this.showNotification('Fehler beim Laden der Patienten: ' + error.message, 'error');
             } finally {
                 this.loading = false;
             }
@@ -463,12 +475,24 @@ function patientsManager() {
 
         async loadOwners() {
             try {
-                const response = await fetch('/public/api/owners.php?action=list');
+                const response = await fetch('/api/owners.php?action=list');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Invalid JSON response');
+                }
+                
                 const data = await response.json();
                 
-                if (data.status === 'success') {
-                    // Data is directly in data.data array
-                    this.owners = data.data || [];
+                if (data.ok) {
+                    // Data is in data.data.items array
+                    this.owners = data.data?.items || [];
+                } else {
+                    throw new Error(data.error || 'Unbekannter Fehler');
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Besitzer:', error);
@@ -571,6 +595,7 @@ function patientsManager() {
                         this.showNotification('Bitte wählen Sie einen Besitzer aus', 'error');
                         return;
                     }
+                    formData.append('owner_mode', 'existing');
                     formData.append('owner_id', this.currentPatient.owner_id);
                 } else if (this.ownerMode === 'new') {
                     // Validate new owner data
@@ -579,7 +604,8 @@ function patientsManager() {
                         return;
                     }
                     
-                    // Add new owner fields
+                    // Add owner mode and fields
+                    formData.append('owner_mode', 'new');
                     formData.append('owner_salutation', this.currentOwner.salutation);
                     formData.append('owner_first_name', this.currentOwner.first_name);
                     formData.append('owner_last_name', this.currentOwner.last_name);
@@ -592,14 +618,28 @@ function patientsManager() {
                     formData.append('owner_city', this.currentOwner.city);
                 }
 
-                const response = await fetch('/public/api/patients.php?action=' + action, {
+                // Add CSRF token if available
+                if (this.csrfToken) {
+                    formData.append('_csrf_token', this.csrfToken);
+                }
+                
+                const response = await fetch('/api/patients.php?action=' + action, {
                     method: 'POST',
                     body: formData
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Invalid JSON response');
+                }
+                
                 const data = await response.json();
                 
-                if (data.status === 'success') {
+                if (data.ok) {
                     this.closeModal();
                     await this.loadOwners(); // Reload owners if new one was created
                     await this.loadPatients();
@@ -608,7 +648,7 @@ function patientsManager() {
                     const message = this.currentPatient.id ? 'Patient erfolgreich aktualisiert!' : 'Patient erfolgreich angelegt!';
                     this.showNotification(message, 'success');
                 } else {
-                    this.showNotification(data.message || 'Fehler beim Speichern', 'error');
+                    this.showNotification(data.error || 'Fehler beim Speichern', 'error');
                 }
             } catch (error) {
                 console.error('Fehler beim Speichern:', error);
@@ -624,19 +664,33 @@ function patientsManager() {
             try {
                 const formData = new FormData();
                 formData.append('id', patient.id);
+                
+                // Add CSRF token if available
+                if (this.csrfToken) {
+                    formData.append('_csrf_token', this.csrfToken);
+                }
 
-                const response = await fetch('/public/api/patients.php?action=delete', {
+                const response = await fetch('/api/patients.php?action=delete', {
                     method: 'POST',
                     body: formData
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Invalid JSON response');
+                }
+                
                 const data = await response.json();
                 
-                if (data.status === 'success') {
+                if (data.ok) {
                     await this.loadPatients();
                     this.showNotification('Patient erfolgreich gelöscht!', 'success');
                 } else {
-                    this.showNotification(data.message || 'Fehler beim Löschen', 'error');
+                    this.showNotification(data.error || 'Fehler beim Löschen', 'error');
                 }
             } catch (error) {
                 console.error('Fehler beim Löschen:', error);
@@ -645,7 +699,7 @@ function patientsManager() {
         },
 
         viewPatient(patient) {
-            window.location.href = `/public/patients.php?action=view&id=${patient.id}`;
+            window.location.href = `/patients.php?action=view&id=${patient.id}`;
         },
 
         getSpeciesIcon(species) {

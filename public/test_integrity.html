@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tierphysio Manager - API Integrity Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+        }
+        .test-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 0.25rem;
+            border-left: 4px solid #dee2e6;
+        }
+        .test-item.success {
+            border-left-color: #28a745;
+        }
+        .test-item.error {
+            border-left-color: #dc3545;
+        }
+        .test-item.pending {
+            border-left-color: #ffc107;
+        }
+        .status-icon {
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+        .test-details {
+            flex: 1;
+        }
+        .test-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .test-url {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .summary {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .stat {
+            font-size: 1.25rem;
+        }
+        .stat.success {
+            color: #28a745;
+        }
+        .stat.error {
+            color: #dc3545;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 1rem;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Tierphysio Manager - API Integrity Test</h1>
+        
+        <div class="test-section">
+            <h2>API Endpoint Tests</h2>
+            <div id="api-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Response Structure Tests</h2>
+            <div id="structure-tests"></div>
+        </div>
+        
+        <div class="summary">
+            <h3>Test Summary</h3>
+            <div class="summary-stats">
+                <div class="stat success">✅ Passed: <span id="passed-count">0</span></div>
+                <div class="stat error">❌ Failed: <span id="failed-count">0</span></div>
+            </div>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="location.reload()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        let passedTests = 0;
+        let failedTests = 0;
+        
+        const apiTests = [
+            { name: 'Patients List', url: '/api/patients.php?action=list', checkOwnerName: true },
+            { name: 'Owners List', url: '/api/owners.php?action=list' },
+            { name: 'Appointments List', url: '/api/appointments.php?action=list' },
+            { name: 'Treatments List', url: '/api/treatments.php?action=list' },
+            { name: 'Invalid Action (Error Test)', url: '/api/patients.php?action=invalid', expectError: true },
+            { name: 'Non-existent Patient (Error Test)', url: '/api/patients.php?action=get&id=99999', expectError: true }
+        ];
+        
+        async function testEndpoint(test) {
+            const testElement = createTestElement(test.name, test.url);
+            document.getElementById('api-tests').appendChild(testElement);
+            
+            try {
+                const response = await fetch(test.url);
+                const contentType = response.headers.get('content-type') || '';
+                
+                // Check Content-Type
+                if (!contentType.includes('application/json')) {
+                    throw new Error(`Invalid Content-Type: ${contentType}. Expected application/json`);
+                }
+                
+                const data = await response.json();
+                
+                // Check response structure
+                if (!data.hasOwnProperty('ok')) {
+                    throw new Error('Response missing "ok" field');
+                }
+                
+                // For error tests, we expect ok to be false
+                if (test.expectError) {
+                    if (!data.ok && data.error) {
+                        markTestSuccess(testElement, 'Error handling works correctly');
+                        passedTests++;
+                    } else {
+                        throw new Error('Expected error response, but got success');
+                    }
+                } else {
+                    // For success tests, we expect ok to be true
+                    if (data.ok) {
+                        // Additional check for owner_full_name in patients list
+                        if (test.checkOwnerName && data.data?.items?.length > 0) {
+                            const firstPatient = data.data.items[0];
+                            if (!firstPatient.hasOwnProperty('owner_full_name')) {
+                                throw new Error('Patient missing owner_full_name field');
+                            }
+                        }
+                        markTestSuccess(testElement, 'Valid JSON response with correct structure');
+                        passedTests++;
+                    } else {
+                        throw new Error(data.error || 'API returned error');
+                    }
+                }
+                
+            } catch (error) {
+                markTestError(testElement, error.message);
+                failedTests++;
+            }
+            
+            updateSummary();
+        }
+        
+        function createTestElement(name, url) {
+            const div = document.createElement('div');
+            div.className = 'test-item pending';
+            div.innerHTML = `
+                <div class="status-icon"><div class="spinner"></div></div>
+                <div class="test-details">
+                    <div class="test-name">${name}</div>
+                    <div class="test-url">${url}</div>
+                </div>
+            `;
+            return div;
+        }
+        
+        function markTestSuccess(element, message = '') {
+            element.className = 'test-item success';
+            element.querySelector('.status-icon').innerHTML = '✅';
+            if (message) {
+                const details = element.querySelector('.test-details');
+                details.innerHTML += `<div style="color: #28a745; font-size: 0.875rem; margin-top: 0.25rem;">${message}</div>`;
+            }
+        }
+        
+        function markTestError(element, error) {
+            element.className = 'test-item error';
+            element.querySelector('.status-icon').innerHTML = '❌';
+            element.querySelector('.test-details').innerHTML += `<div class="error-message">${error}</div>`;
+        }
+        
+        function updateSummary() {
+            document.getElementById('passed-count').textContent = passedTests;
+            document.getElementById('failed-count').textContent = failedTests;
+        }
+        
+        async function testResponseStructure() {
+            const structureTestsDiv = document.getElementById('structure-tests');
+            
+            // Test patients list response structure
+            const testElement = createTestElement('Patients Response Structure', '/api/patients.php?action=list');
+            structureTestsDiv.appendChild(testElement);
+            
+            try {
+                const response = await fetch('/api/patients.php?action=list');
+                const data = await response.json();
+                
+                if (!data.ok || !data.data || !Array.isArray(data.data.items)) {
+                    throw new Error('Invalid response structure: expected {ok: true, data: {items: []}}');
+                }
+                
+                if (data.data.items.length > 0) {
+                    const patient = data.data.items[0];
+                    const requiredFields = ['id', 'name', 'species', 'owner_full_name'];
+                    const missingFields = requiredFields.filter(field => !patient.hasOwnProperty(field));
+                    
+                    if (missingFields.length > 0) {
+                        throw new Error(`Missing fields in patient object: ${missingFields.join(', ')}`);
+                    }
+                }
+                
+                markTestSuccess(testElement, 'Structure validated: {ok, data: {items, total}}');
+                passedTests++;
+            } catch (error) {
+                markTestError(testElement, error.message);
+                failedTests++;
+            }
+            
+            updateSummary();
+        }
+        
+        async function runAllTests() {
+            // Reset counters
+            passedTests = 0;
+            failedTests = 0;
+            document.getElementById('api-tests').innerHTML = '';
+            document.getElementById('structure-tests').innerHTML = '';
+            
+            // Run API tests
+            for (const test of apiTests) {
+                await testEndpoint(test);
+                await new Promise(resolve => setTimeout(resolve, 200)); // Small delay between tests
+            }
+            
+            // Run structure tests
+            await testResponseStructure();
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
