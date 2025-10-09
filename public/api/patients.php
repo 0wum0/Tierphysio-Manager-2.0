@@ -68,13 +68,8 @@ try {
                         p.gender,
                         p.birth_date,
                         p.created_at,
-                        p.is_active,
                         o.id AS owner_id,
-                        CASE 
-                            WHEN o.id IS NULL THEN '—'
-                            WHEN TRIM(CONCAT(IFNULL(o.first_name, ''), ' ', IFNULL(o.last_name, ''))) = '' THEN '—'
-                            ELSE TRIM(CONCAT(IFNULL(o.first_name, ''), ' ', IFNULL(o.last_name, '')))
-                        END AS owner_name,
+                        COALESCE(CONCAT(o.first_name, ' ', o.last_name), '-') AS owner_name,
                         o.customer_number AS owner_customer_number
                     FROM tp_patients p
                     LEFT JOIN tp_owners o ON p.owner_id = o.id
@@ -86,8 +81,8 @@ try {
                 ob_end_clean();
                 echo json_encode([
                     'ok' => true,
-                    'items' => $rows,
-                    'count' => count($rows)
+                    'data' => $rows,
+                    'total' => count($rows)
                 ], JSON_UNESCAPED_UNICODE);
             } catch (PDOException $e) {
                 ob_end_clean();

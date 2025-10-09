@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Patients List</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-warning { background: #ffc107; color: #333; }
+        .badge-error { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Tierphysio Manager 2.0 - API Test</h1>
+        <p>Teste die Patients API mit korrektem JSON-Format</p>
+        
+        <div class="test-section">
+            <div class="test-title">📋 Test 1: Patientenliste abrufen</div>
+            <button onclick="testPatientsList()">Test Patients List API</button>
+            <div id="list-status"></div>
+            <pre id="list-response" style="display:none;"></pre>
+            <div id="list-table"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">✅ Test 2: JSON-Struktur Validierung</div>
+            <button onclick="validateJsonStructure()">Validate JSON Structure</button>
+            <div id="validation-status"></div>
+            <pre id="validation-details" style="display:none;"></pre>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Test 3: Mock-Daten erstellen</div>
+            <button onclick="createMockPatient()">Create Test Patient</button>
+            <div id="mock-status"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/public/api/patients.php';
+
+        async function testPatientsList() {
+            const statusEl = document.getElementById('list-status');
+            const responseEl = document.getElementById('list-response');
+            const tableEl = document.getElementById('list-table');
+            
+            statusEl.innerHTML = '<div class="status info">⏳ Teste API-Endpunkt...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}?action=list`);
+                const data = await response.json();
+                
+                responseEl.style.display = 'block';
+                responseEl.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.ok && data.data) {
+                    statusEl.innerHTML = `<div class="status success">
+                        ✅ API erfolgreich! Gefunden: ${data.total || data.data.length} Patienten
+                        <br>✅ JSON-Key "data" ist korrekt!
+                    </div>`;
+                    
+                    if (data.data.length > 0) {
+                        renderPatientsTable(data.data, tableEl);
+                    } else {
+                        tableEl.innerHTML = '<div class="status warning">⚠️ Keine Patienten in der Datenbank. Bitte erst Testdaten erstellen.</div>';
+                    }
+                } else if (data.ok && data.items) {
+                    statusEl.innerHTML = '<div class="status warning">⚠️ API verwendet noch "items" statt "data". Update erforderlich!</div>';
+                } else {
+                    statusEl.innerHTML = `<div class="status error">❌ API-Fehler: ${data.error || 'Unbekannter Fehler'}</div>`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<div class="status error">❌ Verbindungsfehler: ${error.message}</div>`;
+                responseEl.style.display = 'block';
+                responseEl.textContent = error.toString();
+            }
+        }
+
+        async function validateJsonStructure() {
+            const statusEl = document.getElementById('validation-status');
+            const detailsEl = document.getElementById('validation-details');
+            
+            try {
+                const response = await fetch(`${API_URL}?action=list`);
+                const text = await response.text();
+                
+                // Check if response is JSON
+                try {
+                    const data = JSON.parse(text);
+                    
+                    const checks = {
+                        'JSON ist gültig': true,
+                        'Hat "ok" Feld': 'ok' in data,
+                        'Hat "data" Feld (Frontend-kompatibel)': 'data' in data,
+                        'Hat KEIN "items" Feld (alt)': !('items' in data),
+                        'Hat "total" Feld': 'total' in data,
+                        'Data ist Array': Array.isArray(data.data),
+                        'Keine HTML-Inhalte': !text.includes('<!DOCTYPE') && !text.includes('<html')
+                    };
+                    
+                    detailsEl.style.display = 'block';
+                    detailsEl.textContent = JSON.stringify(checks, null, 2);
+                    
+                    const allPassed = Object.values(checks).every(v => v === true);
+                    
+                    if (allPassed) {
+                        statusEl.innerHTML = '<div class="status success">✅ Alle JSON-Struktur-Tests bestanden!</div>';
+                    } else {
+                        const failed = Object.entries(checks).filter(([k, v]) => v !== true).map(([k]) => k);
+                        statusEl.innerHTML = `<div class="status warning">⚠️ Einige Tests fehlgeschlagen: ${failed.join(', ')}</div>`;
+                    }
+                } catch (parseError) {
+                    statusEl.innerHTML = '<div class="status error">❌ Response ist kein gültiges JSON!</div>';
+                    detailsEl.style.display = 'block';
+                    detailsEl.textContent = 'Raw response:\n' + text.substring(0, 500);
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<div class="status error">❌ Verbindungsfehler: ${error.message}</div>`;
+            }
+        }
+
+        async function createMockPatient() {
+            const statusEl = document.getElementById('mock-status');
+            
+            const mockData = {
+                name: 'Test-Patient-' + Date.now(),
+                species: 'dog',
+                breed: 'Labrador',
+                gender: 'male',
+                birth_date: '2020-01-15',
+                owner_first_name: 'Max',
+                owner_last_name: 'Mustermann',
+                owner_email: 'max@example.com',
+                owner_phone: '089-123456'
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}?action=create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(mockData).toString()
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    statusEl.innerHTML = `<div class="status success">✅ Test-Patient erstellt: ${mockData.name}</div>`;
+                    // Reload list after creation
+                    setTimeout(() => testPatientsList(), 1000);
+                } else {
+                    statusEl.innerHTML = `<div class="status error">❌ Fehler: ${data.error || 'Unbekannt'}</div>`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<div class="status error">❌ Fehler: ${error.message}</div>`;
+            }
+        }
+
+        function renderPatientsTable(patients, container) {
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patienten-Nr.</th>
+                            <th>Name</th>
+                            <th>Tierart</th>
+                            <th>Rasse</th>
+                            <th>Besitzer</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${patients.map(p => `
+                            <tr>
+                                <td>${p.id}</td>
+                                <td><span class="badge badge-success">${p.patient_number || '-'}</span></td>
+                                <td><strong>${p.patient_name || p.name || '-'}</strong></td>
+                                <td>${p.species || '-'}</td>
+                                <td>${p.breed || '-'}</td>
+                                <td>${p.owner_name || '<span class="badge badge-warning">Kein Besitzer</span>'}</td>
+                                <td>${p.created_at ? new Date(p.created_at).toLocaleDateString('de-DE') : '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            container.innerHTML = html;
+        }
+
+        // Auto-run first test on page load
+        window.addEventListener('load', () => {
+            console.log('🚀 Tierphysio Manager API Test gestartet');
+            console.log('API Endpoint:', API_URL);
+        });
+    </script>
+</body>
+</html>
