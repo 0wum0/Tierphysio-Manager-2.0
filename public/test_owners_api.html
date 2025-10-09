@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owners API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .test { margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test h3 { margin-top: 0; color: #333; }
+        .success { background: #d4edda; color: #155724; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .pending { background: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .stats { display: flex; gap: 20px; margin: 20px 0; }
+        .stat { background: white; padding: 15px; border-radius: 8px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stat h4 { margin: 0; color: #666; font-size: 14px; }
+        .stat p { margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Owners API Test Suite</h1>
+    
+    <div class="stats">
+        <div class="stat">
+            <h4>Tests</h4>
+            <p id="totalTests">0</p>
+        </div>
+        <div class="stat">
+            <h4>✅ Passed</h4>
+            <p id="passedTests">0</p>
+        </div>
+        <div class="stat">
+            <h4>❌ Failed</h4>
+            <p id="failedTests">0</p>
+        </div>
+    </div>
+
+    <div id="results"></div>
+
+    <div style="margin: 20px 0;">
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <script>
+        const API_BASE = '/api/owners.php';
+        let testResults = { total: 0, passed: 0, failed: 0 };
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = testResults.total;
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = { total: 0, passed: 0, failed: 0 };
+            updateStats();
+        }
+
+        function addResult(title, status, details) {
+            const resultsDiv = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test';
+            
+            let statusHtml = '';
+            if (status === 'success') {
+                statusHtml = '<div class="success">✅ Test Passed</div>';
+                testResults.passed++;
+            } else if (status === 'error') {
+                statusHtml = '<div class="error">❌ Test Failed</div>';
+                testResults.failed++;
+            } else {
+                statusHtml = '<div class="pending">⏳ ' + status + '</div>';
+            }
+            
+            testDiv.innerHTML = `
+                <h3>${title}</h3>
+                ${statusHtml}
+                ${details ? `<pre>${JSON.stringify(details, null, 2)}</pre>` : ''}
+            `;
+            
+            resultsDiv.appendChild(testDiv);
+            testResults.total++;
+            updateStats();
+        }
+
+        async function testListOwners() {
+            try {
+                const response = await fetch(`${API_BASE}?action=list`);
+                const data = await response.json();
+                
+                // Check response structure
+                if (data.ok === true || data.status === 'success') {
+                    const items = data.data?.items ?? data.items ?? [];
+                    const count = data.data?.count ?? data.count ?? 0;
+                    
+                    addResult('List Owners', 'success', {
+                        status: data.status || (data.ok ? 'success' : 'error'),
+                        itemCount: items.length,
+                        totalCount: count,
+                        firstItem: items[0] || 'No items'
+                    });
+                } else {
+                    addResult('List Owners', 'error', data);
+                }
+            } catch (error) {
+                addResult('List Owners', 'error', { error: error.message });
+            }
+        }
+
+        async function testCreateOwner() {
+            try {
+                const testOwner = {
+                    salutation: 'Frau',
+                    first_name: 'Test',
+                    last_name: 'Owner_' + Date.now(),
+                    email: 'test' + Date.now() + '@example.com',
+                    phone: '+49 123 456789',
+                    city: 'Berlin',
+                    postal_code: '10115',
+                    street: 'Teststraße',
+                    house_number: '42'
+                };
+
+                const response = await fetch(`${API_BASE}?action=create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testOwner)
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok === true || data.status === 'success') {
+                    const items = data.data?.items ?? data.items ?? [];
+                    addResult('Create Owner', 'success', {
+                        status: data.status || (data.ok ? 'success' : 'error'),
+                        created: items[0] || 'No item returned'
+                    });
+                    
+                    // Return the created owner ID for deletion test
+                    return items[0]?.id;
+                } else {
+                    addResult('Create Owner', 'error', data);
+                    return null;
+                }
+            } catch (error) {
+                addResult('Create Owner', 'error', { error: error.message });
+                return null;
+            }
+        }
+
+        async function testDeleteOwner(id) {
+            if (!id) {
+                addResult('Delete Owner', 'error', { error: 'No ID provided for deletion' });
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}?action=delete&id=${id}`);
+                const data = await response.json();
+                
+                if (data.ok === true || data.status === 'success') {
+                    addResult('Delete Owner', 'success', {
+                        status: data.status || (data.ok ? 'success' : 'error'),
+                        deletedId: id
+                    });
+                } else {
+                    addResult('Delete Owner', 'error', data);
+                }
+            } catch (error) {
+                addResult('Delete Owner', 'error', { error: error.message });
+            }
+        }
+
+        async function testInvalidAction() {
+            try {
+                const response = await fetch(`${API_BASE}?action=invalid_action`);
+                const data = await response.json();
+                
+                // This should return an error
+                if (data.ok === false || data.status === 'error') {
+                    addResult('Invalid Action (Expected Error)', 'success', {
+                        message: data.message || 'Unknown action'
+                    });
+                } else {
+                    addResult('Invalid Action', 'error', { 
+                        error: 'Expected error response but got success',
+                        data: data 
+                    });
+                }
+            } catch (error) {
+                addResult('Invalid Action', 'error', { error: error.message });
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            addResult('Test Suite', 'pending', 'Starting tests...');
+            
+            // Test 1: List owners
+            await testListOwners();
+            
+            // Test 2: Create owner and then delete it
+            const createdId = await testCreateOwner();
+            
+            // Test 3: Delete the created owner
+            if (createdId) {
+                await testDeleteOwner(createdId);
+            }
+            
+            // Test 4: Test invalid action
+            await testInvalidAction();
+            
+            // Final summary
+            const allPassed = testResults.failed === 0;
+            addResult(
+                'Test Summary', 
+                allPassed ? 'success' : 'error',
+                {
+                    total: testResults.total - 1, // Exclude summary itself
+                    passed: testResults.passed,
+                    failed: testResults.failed,
+                    status: allPassed ? 'All tests passed!' : 'Some tests failed!'
+                }
+            );
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
