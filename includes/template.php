@@ -35,6 +35,21 @@ function render_template($path, $data = []) {
         // Add debug extension
         $twig->addExtension(new \Twig\Extension\DebugExtension());
         
+        // User role helper
+        if (!function_exists('is_admin')) {
+            function is_admin() {
+                if (!isset($_SESSION)) {
+                    session_start();
+                }
+                return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+            }
+        }
+        
+        // Register the helper with Twig
+        $twig->addFunction(new \Twig\TwigFunction('is_admin', function () {
+            return is_admin();
+        }));
+        
         // Translation helper function
         if (!function_exists('__')) {
             function __($text) {
