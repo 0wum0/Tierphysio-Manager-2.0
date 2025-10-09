@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Suite - Tierphysio Manager 2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .controls {
+            padding: 2rem;
+            border-bottom: 2px solid #e5e7eb;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .status {
+            margin-left: auto;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .status.running {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .tests {
+            padding: 2rem;
+        }
+        
+        .test-item {
+            margin-bottom: 1.5rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .test-item.success {
+            border-color: #10b981;
+        }
+        
+        .test-item.error {
+            border-color: #ef4444;
+        }
+        
+        .test-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+        
+        .test-header:hover {
+            background: #f3f4f6;
+        }
+        
+        .test-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .test-icon.pending {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .test-icon.success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .test-icon.error {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .test-name {
+            flex: 1;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .test-endpoint {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-family: 'Courier New', monospace;
+            background: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+        
+        .test-details {
+            padding: 1.5rem;
+            background: #fafbfc;
+            display: none;
+        }
+        
+        .test-details.show {
+            display: block;
+        }
+        
+        .detail-row {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #6b7280;
+            min-width: 120px;
+        }
+        
+        .detail-value {
+            flex: 1;
+            color: #374151;
+        }
+        
+        .detail-value.success {
+            color: #10b981;
+        }
+        
+        .detail-value.error {
+            color: #ef4444;
+        }
+        
+        .response-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .summary {
+            padding: 2rem;
+            background: #f9fafb;
+            border-top: 2px solid #e5e7eb;
+        }
+        
+        .summary-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #374151;
+        }
+        
+        .stat-value.success {
+            color: #10b981;
+        }
+        
+        .stat-value.error {
+            color: #ef4444;
+        }
+        
+        .log-output {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #1f2937;
+            color: #10b981;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 API Test Suite</h1>
+            <p>Tierphysio Manager 2.0 - JSON Response Standardization</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="runAllTests()">
+                ▶️ Alle Tests ausführen
+            </button>
+            <button class="btn btn-secondary" onclick="clearResults()">
+                🗑️ Ergebnisse löschen
+            </button>
+            <div class="status" id="status">Bereit</div>
+        </div>
+        
+        <div class="tests" id="tests">
+            <!-- Tests werden dynamisch geladen -->
+        </div>
+        
+        <div class="summary" id="summary" style="display: none;">
+            <h2 class="summary-title">Zusammenfassung</h2>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-label">Gesamt</div>
+                    <div class="stat-value" id="totalTests">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Erfolgreich</div>
+                    <div class="stat-value success" id="passedTests">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Fehlgeschlagen</div>
+                    <div class="stat-value error" id="failedTests">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Erfolgsquote</div>
+                    <div class="stat-value" id="successRate">0%</div>
+                </div>
+            </div>
+            <div class="log-output" id="logOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_TESTS = [
+            {
+                name: 'Patients API',
+                endpoint: '/api/patients.php',
+                action: 'list',
+                description: 'Patientenliste abrufen'
+            },
+            {
+                name: 'Owners API',
+                endpoint: '/api/owners.php',
+                action: 'list',
+                description: 'Besitzerliste abrufen'
+            },
+            {
+                name: 'Appointments API',
+                endpoint: '/api/appointments.php',
+                action: 'list',
+                description: 'Terminliste abrufen'
+            },
+            {
+                name: 'Treatments API',
+                endpoint: '/api/treatments.php',
+                action: 'list',
+                description: 'Behandlungsliste abrufen'
+            },
+            {
+                name: 'Invoices API',
+                endpoint: '/api/invoices.php',
+                action: 'list',
+                description: 'Rechnungsliste abrufen'
+            },
+            {
+                name: 'Notes API',
+                endpoint: '/api/notes.php',
+                action: 'list',
+                description: 'Notizliste abrufen'
+            },
+            {
+                name: 'Integrity Check',
+                endpoint: '/api/integrity_json.php',
+                action: '',
+                description: 'System-Integritätsprüfung'
+            }
+        ];
+
+        let testResults = [];
+        let logMessages = [];
+
+        function initTests() {
+            const testsContainer = document.getElementById('tests');
+            testsContainer.innerHTML = '';
+            
+            API_TESTS.forEach((test, index) => {
+                const testHtml = `
+                    <div class="test-item" id="test-${index}">
+                        <div class="test-header" onclick="toggleDetails(${index})">
+                            <div class="test-icon pending" id="icon-${index}">
+                                ⏳
+                            </div>
+                            <div class="test-name">${test.name}</div>
+                            <div class="test-endpoint">${test.endpoint}${test.action ? '?action=' + test.action : ''}</div>
+                        </div>
+                        <div class="test-details" id="details-${index}">
+                            <div class="detail-row">
+                                <span class="detail-label">Beschreibung:</span>
+                                <span class="detail-value">${test.description}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value" id="status-${index}">Ausstehend</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Response Time:</span>
+                                <span class="detail-value" id="time-${index}">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Content-Type:</span>
+                                <span class="detail-value" id="content-${index}">-</span>
+                            </div>
+                            <div class="response-preview" id="response-${index}"></div>
+                        </div>
+                    </div>
+                `;
+                testsContainer.innerHTML += testHtml;
+            });
+        }
+
+        function toggleDetails(index) {
+            const details = document.getElementById(`details-${index}`);
+            details.classList.toggle('show');
+        }
+
+        async function runAllTests() {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = 'Tests werden ausgeführt...';
+            statusEl.className = 'status running';
+            
+            testResults = [];
+            logMessages = [];
+            
+            for (let i = 0; i < API_TESTS.length; i++) {
+                await runSingleTest(i);
+            }
+            
+            showSummary();
+            
+            statusEl.textContent = 'Tests abgeschlossen';
+            statusEl.className = 'status success';
+        }
+
+        async function runSingleTest(index) {
+            const test = API_TESTS[index];
+            const testEl = document.getElementById(`test-${index}`);
+            const iconEl = document.getElementById(`icon-${index}`);
+            const statusEl = document.getElementById(`status-${index}`);
+            const timeEl = document.getElementById(`time-${index}`);
+            const contentEl = document.getElementById(`content-${index}`);
+            const responseEl = document.getElementById(`response-${index}`);
+            
+            iconEl.textContent = '⏳';
+            iconEl.className = 'test-icon pending';
+            statusEl.textContent = 'Wird ausgeführt...';
+            
+            const startTime = Date.now();
+            
+            try {
+                const url = test.endpoint + (test.action ? `?action=${test.action}` : '');
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                const contentType = response.headers.get('content-type');
+                const responseText = await response.text();
+                
+                let responseData;
+                let isValidJson = false;
+                let hasCorrectStructure = false;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                    isValidJson = true;
+                    
+                    // Check for correct structure
+                    if (responseData.status === 'success' || responseData.status === 'error') {
+                        hasCorrectStructure = true;
+                        
+                        // Additional checks for success responses
+                        if (responseData.status === 'success') {
+                            if (!responseData.hasOwnProperty('data')) {
+                                hasCorrectStructure = false;
+                                logMessages.push(`❌ ${test.name}: Missing 'data' field in success response`);
+                            } else if (test.action === 'list' && Array.isArray(responseData.data.items)) {
+                                if (!responseData.data.hasOwnProperty('count')) {
+                                    logMessages.push(`⚠️ ${test.name}: Missing 'count' field in list response`);
+                                }
+                            }
+                        }
+                    } else {
+                        hasCorrectStructure = false;
+                        logMessages.push(`❌ ${test.name}: Missing or incorrect 'status' field`);
+                    }
+                } catch (e) {
+                    isValidJson = false;
+                    logMessages.push(`❌ ${test.name}: Invalid JSON response`);
+                }
+                
+                const success = response.ok && isValidJson && hasCorrectStructure && 
+                               contentType && contentType.includes('application/json');
+                
+                testResults.push({
+                    test: test.name,
+                    success: success,
+                    responseTime: responseTime,
+                    statusCode: response.status,
+                    contentType: contentType,
+                    response: responseData
+                });
+                
+                // Update UI
+                if (success) {
+                    testEl.className = 'test-item success';
+                    iconEl.textContent = '✅';
+                    iconEl.className = 'test-icon success';
+                    statusEl.textContent = 'Erfolgreich';
+                    statusEl.className = 'detail-value success';
+                    logMessages.push(`✅ ${test.name}: Test erfolgreich`);
+                } else {
+                    testEl.className = 'test-item error';
+                    iconEl.textContent = '❌';
+                    iconEl.className = 'test-icon error';
+                    statusEl.textContent = 'Fehlgeschlagen';
+                    statusEl.className = 'detail-value error';
+                    
+                    if (!contentType?.includes('application/json')) {
+                        logMessages.push(`❌ ${test.name}: Incorrect Content-Type: ${contentType}`);
+                    }
+                }
+                
+                timeEl.textContent = `${responseTime}ms`;
+                contentEl.textContent = contentType || 'Not set';
+                contentEl.className = contentType?.includes('application/json') ? 'detail-value success' : 'detail-value error';
+                
+                responseEl.textContent = JSON.stringify(responseData || responseText, null, 2);
+                
+            } catch (error) {
+                testEl.className = 'test-item error';
+                iconEl.textContent = '❌';
+                iconEl.className = 'test-icon error';
+                statusEl.textContent = 'Fehler: ' + error.message;
+                statusEl.className = 'detail-value error';
+                
+                testResults.push({
+                    test: test.name,
+                    success: false,
+                    error: error.message
+                });
+                
+                logMessages.push(`❌ ${test.name}: ${error.message}`);
+            }
+        }
+
+        function showSummary() {
+            const summaryEl = document.getElementById('summary');
+            const totalEl = document.getElementById('totalTests');
+            const passedEl = document.getElementById('passedTests');
+            const failedEl = document.getElementById('failedTests');
+            const rateEl = document.getElementById('successRate');
+            const logEl = document.getElementById('logOutput');
+            
+            const total = testResults.length;
+            const passed = testResults.filter(r => r.success).length;
+            const failed = total - passed;
+            const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
+            
+            totalEl.textContent = total;
+            passedEl.textContent = passed;
+            failedEl.textContent = failed;
+            rateEl.textContent = rate + '%';
+            rateEl.className = rate === 100 ? 'stat-value success' : (rate > 70 ? 'stat-value' : 'stat-value error');
+            
+            // Show log messages
+            logEl.innerHTML = logMessages.join('<br>');
+            
+            summaryEl.style.display = 'block';
+        }
+
+        function clearResults() {
+            initTests();
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('status').textContent = 'Bereit';
+            document.getElementById('status').className = 'status';
+            testResults = [];
+            logMessages = [];
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initTests);
+    </script>
+</body>
+</html>

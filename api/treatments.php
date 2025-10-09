@@ -18,22 +18,19 @@ ob_start();
 
 require_once __DIR__ . '/../includes/db.php';
 
-// Unified JSON responders
-function json_ok($data = [], $code = 200) {
+// API Helper Functions
+function api_success($data = [], $extra = []) {
     if (ob_get_length()) ob_end_clean();
-    http_response_code($code);
-    echo json_encode(['ok' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
+    $response = array_merge(['status' => 'success', 'data' => $data], $extra);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
-function json_err($msg, $code = 400, $extra = []) {
+function api_error($message = 'Unbekannter Fehler', $code = 400, $extra = []) {
     if (ob_get_length()) ob_end_clean();
     http_response_code($code);
-    $response = ['ok' => false, 'error' => $msg];
-    if (!empty($extra)) {
-        $response = array_merge($response, $extra);
-    }
-    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    $response = array_merge(['status' => 'error', 'message' => $message], $extra);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
@@ -94,13 +91,13 @@ try {
             
             $treatments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            json_ok(['items' => $treatments, 'total' => count($treatments)]);
+            api_success(['items' => $treatments, 'count' => count($treatments)]);
             break;
             
         case 'get':
             $id = intval($_GET['id'] ?? 0);
             if (!$id) {
-                json_err('Treatment ID fehlt', 400);
+                api_error('Treatment ID fehlt', 400);
             }
             
             $stmt = $pdo->prepare("
@@ -123,10 +120,10 @@ try {
             $treatment = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$treatment) {
-                json_err('Treatment nicht gefunden', 404);
+                api_error('Treatment nicht gefunden', 404);
             }
             
-            json_ok($treatment);
+            api_success($treatment);
             break;
             
         case 'create':
@@ -143,7 +140,7 @@ try {
             $treatment_type = $input['treatment_type'] ?? '';
             
             if (!$patient_id || !$treatment_date || !$treatment_type) {
-                json_err('Pflichtfelder fehlen', 400);
+                api_error('Pflichtfelder fehlen', 400);
             }
             
             // Insert treatment
@@ -187,7 +184,7 @@ try {
             $stmt->execute([$id]);
             $treatment = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            json_ok(['treatment' => $treatment, 'treatment_id' => $id], 201);
+            api_success(['treatment' => $treatment, 'treatment_id' => $id], 201);
             break;
             
         case 'update':
@@ -199,14 +196,14 @@ try {
             
             $id = intval($input['id'] ?? 0);
             if (!$id) {
-                json_err('Treatment ID fehlt', 400);
+                api_error('Treatment ID fehlt', 400);
             }
             
             // Check if treatment exists
             $stmt = $pdo->prepare("SELECT * FROM tp_treatments WHERE id = ?");
             $stmt->execute([$id]);
             if (!$stmt->fetch()) {
-                json_err('Treatment nicht gefunden', 404);
+                api_error('Treatment nicht gefunden', 404);
             }
             
             // Update treatment
@@ -242,7 +239,7 @@ try {
                 $id
             ]);
             
-            json_ok(['message' => 'Treatment erfolgreich aktualisiert']);
+            api_success(['message' => 'Treatment erfolgreich aktualisiert']);
             break;
             
         case 'delete':
@@ -254,25 +251,25 @@ try {
             
             $id = intval($input['id'] ?? $_GET['id'] ?? 0);
             if (!$id) {
-                json_err('Treatment ID fehlt', 400);
+                api_error('Treatment ID fehlt', 400);
             }
             
             $stmt = $pdo->prepare("DELETE FROM tp_treatments WHERE id = ?");
             $stmt->execute([$id]);
             
-            json_ok(['message' => 'Treatment erfolgreich gelöscht']);
+            api_success(['message' => 'Treatment erfolgreich gelöscht']);
             break;
             
         default:
-            json_err("Unbekannte Aktion: " . $action, 400);
+            api_error("Unbekannte Aktion: " . $action, 400);
     }
     
 } catch (PDOException $e) {
     error_log("Treatments API PDO Error (" . $action . "): " . $e->getMessage());
-    json_err('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Datenbankfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
 } catch (Throwable $e) {
     error_log("Treatments API Error (" . $action . "): " . $e->getMessage());
-    json_err('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
+    api_error('Serverfehler aufgetreten', 500, ['details' => APP_DEBUG ? $e->getMessage() : null]);
 }
 
 // Should never reach here
