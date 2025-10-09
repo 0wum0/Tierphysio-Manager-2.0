@@ -91,7 +91,7 @@ try {
             
             $treatments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success(['items' => $treatments, 'count' => count($treatments)]);
+            api_success(['data' => $treatments, 'count' => count($treatments)]);
             break;
             
         case 'get':

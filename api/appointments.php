@@ -97,7 +97,7 @@ try {
             
             $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success(['items' => $appointments, 'count' => count($appointments)]);
+            api_success(['data' => $appointments, 'count' => count($appointments)]);
             break;
             
         case 'get':
