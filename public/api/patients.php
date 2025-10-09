@@ -43,71 +43,58 @@ function generateCustomerNumber($pdo) {
 $action = $_GET['action'] ?? 'list';
 
 try {
-    $pdo = get_pdo();
+    // Try to get database connection
+    try {
+        $pdo = get_pdo();
+    } catch (Exception $dbError) {
+        // If database connection fails, use mock data for development
+        if (defined('APP_DEBUG') && APP_DEBUG) {
+            require __DIR__ . '/patients_mock.php';
+            exit;
+        }
+        throw $dbError;
+    }
     
     switch ($action) {
         case 'list':
-            // Pagination parameters
-            $page = max(1, intval($_GET['page'] ?? 1));
-            $per_page = max(1, min(100, intval($_GET['per_page'] ?? 20)));
-            $offset = ($page - 1) * $per_page;
-            $search = trim($_GET['search'] ?? '');
-            
-            // Base query
-            $where_clause = '';
-            $params = [];
-            
-            if ($search) {
-                $where_clause = " WHERE p.name LIKE :search OR o.first_name LIKE :search OR o.last_name LIKE :search ";
-                $params['search'] = '%' . $search . '%';
-            }
-            
-            // Get total count
-            $count_sql = "SELECT COUNT(*) as total FROM tp_patients p 
-                          LEFT JOIN tp_owners o ON p.owner_id = o.id" . $where_clause;
-            $stmt = $pdo->prepare($count_sql);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
-            }
-            $stmt->execute();
-            $total = $stmt->fetch()['total'];
-            
-            // Get patients with owner information
-            $sql = "SELECT p.*, 
-                    o.first_name as owner_first_name, 
-                    o.last_name as owner_last_name,
-                    o.customer_number,
-                    o.phone as owner_phone,
-                    o.mobile as owner_mobile,
-                    o.email as owner_email,
-                    CONCAT(o.street, ' ', o.house_number, ', ', o.postal_code, ' ', o.city) as owner_address
-                    FROM tp_patients p 
-                    LEFT JOIN tp_owners o ON p.owner_id = o.id 
-                    " . $where_clause . "
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        p.id,
+                        p.patient_number,
+                        p.name AS patient_name,
+                        p.species,
+                        p.breed,
+                        p.gender,
+                        p.birth_date,
+                        p.created_at,
+                        p.is_active,
+                        o.id AS owner_id,
+                        CASE 
+                            WHEN o.id IS NULL THEN '—'
+                            WHEN TRIM(CONCAT(IFNULL(o.first_name, ''), ' ', IFNULL(o.last_name, ''))) = '' THEN '—'
+                            ELSE TRIM(CONCAT(IFNULL(o.first_name, ''), ' ', IFNULL(o.last_name, '')))
+                        END AS owner_name,
+                        o.customer_number AS owner_customer_number
+                    FROM tp_patients p
+                    LEFT JOIN tp_owners o ON p.owner_id = o.id
                     ORDER BY p.created_at DESC
-                    LIMIT :limit OFFSET :offset";
-            
-            $stmt = $pdo->prepare($sql);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
+                ");
+                $stmt->execute();
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                ob_end_clean();
+                echo json_encode([
+                    'ok' => true,
+                    'items' => $rows,
+                    'count' => count($rows)
+                ], JSON_UNESCAPED_UNICODE);
+            } catch (PDOException $e) {
+                ob_end_clean();
+                http_response_code(500);
+                echo json_encode(['ok' => false, 'error' => 'DB Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
             }
-            $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $patients = $stmt->fetchAll();
-            
-            ob_end_clean();
-            echo json_encode([
-                'ok' => true,
-                'data' => $patients,
-                'pagination' => [
-                    'page' => $page,
-                    'per_page' => $per_page,
-                    'total' => $total,
-                    'total_pages' => ceil($total / $per_page)
-                ]
-            ], JSON_UNESCAPED_UNICODE);
-            break;
+            exit;
             
         case 'get':
             $id = intval($_GET['id'] ?? 0);

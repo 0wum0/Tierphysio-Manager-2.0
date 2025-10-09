@@ -223,8 +223,10 @@ class PatientManager {
     async loadPatients(filters = {}) {
         try {
             const result = await api.getAll(this.endpoint, filters);
-            if (result.status === 'success') {
-                this.renderPatients(result.data);
+            if (result.ok) {
+                this.renderPatients(result.items || []);
+            } else if (result.status === 'success') {
+                this.renderPatients(result.data || []);
             }
         } catch (error) {
             api.showNotification('Fehler beim Laden der Patienten', 'error');
@@ -248,9 +250,9 @@ class PatientManager {
                     </span>
                 </div>
                 <div class="p-5">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">${patient.name}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">${patient.patient_name || patient.name || 'Unbekannt'}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400">${this.getSpeciesName(patient.species)} ${patient.breed ? '• ' + patient.breed : ''}</p>
-                    <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">Besitzer: ${patient.owner_first_name} ${patient.owner_last_name}</p>
+                    <p class="text-sm text-purple-600 dark:text-purple-400 mt-2">Besitzer: ${patient.owner_name || '—'}</p>
                     <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/20">
                         <div class="flex gap-2">
                             <button onclick="patientManager.editPatient(${patient.id})" class="text-purple-500 hover:text-purple-400 transition-colors">
