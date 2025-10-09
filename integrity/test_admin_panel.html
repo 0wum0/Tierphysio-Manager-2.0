@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Test - Tierphysio Manager 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-purple-600">Admin Panel Integration Test</h1>
+        
+        <!-- Test Status -->
+        <div id="status" class="mb-8 p-4 bg-blue-100 rounded-lg">
+            <p class="text-blue-700">Initialisiere Tests...</p>
+        </div>
+        
+        <!-- Test Results -->
+        <div id="results" class="space-y-4"></div>
+        
+        <!-- Detailed Output -->
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-4">Test Details</h2>
+            <pre id="output" class="bg-gray-800 text-green-400 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+        </div>
+    </div>
+
+    <script>
+        const apiBase = '/admin/api';
+        const tests = [];
+        let output = '';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().substr(11, 8);
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            output += `[${timestamp}] ${prefix} ${message}\n`;
+            document.getElementById('output').textContent = output;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `mb-8 p-4 rounded-lg ${
+                type === 'error' ? 'bg-red-100' : 
+                type === 'success' ? 'bg-green-100' : 
+                'bg-blue-100'
+            }`;
+            statusDiv.innerHTML = `<p class="${
+                type === 'error' ? 'text-red-700' : 
+                type === 'success' ? 'text-green-700' : 
+                'text-blue-700'
+            }">${message}</p>`;
+        }
+        
+        function addTestResult(name, success, details = '') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `p-4 rounded-lg ${success ? 'bg-green-50' : 'bg-red-50'}`;
+            resultDiv.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="font-medium ${success ? 'text-green-800' : 'text-red-800'}">
+                        ${success ? '✅' : '❌'} ${name}
+                    </span>
+                    ${details ? `<span class="text-sm text-gray-600">${details}</span>` : ''}
+                </div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        async function testEndpoint(name, url, options = {}) {
+            log(`Testing: ${name}`);
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Invalid content-type: ${contentType}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.hasOwnProperty('status')) {
+                    throw new Error('Response missing "status" field');
+                }
+                
+                if (response.ok && data.status === 'success') {
+                    log(`✓ ${name}: Success`, 'success');
+                    addTestResult(name, true, `Status: ${response.status}`);
+                    return { success: true, data };
+                } else if (data.status === 'error') {
+                    log(`✓ ${name}: Expected error - ${data.message}`, 'success');
+                    addTestResult(name, true, `Expected error: ${data.message}`);
+                    return { success: true, data };
+                } else {
+                    throw new Error(`Unexpected response: ${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                log(`✗ ${name}: ${error.message}`, 'error');
+                addTestResult(name, false, error.message);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function runTests() {
+            updateStatus('Tests werden ausgeführt...', 'info');
+            log('Starting Admin Panel API Tests');
+            
+            // Test 1: Admin JSON Test Endpoint
+            await testEndpoint(
+                'Admin JSON Test Endpoint',
+                '/admin/api/test_admin_json.php'
+            );
+            
+            // Test 2: Auth Check (should fail without login)
+            await testEndpoint(
+                'Auth Check (ohne Login)',
+                `${apiBase}/auth.php?action=check`
+            );
+            
+            // Test 3: Users List (should fail without auth)
+            await testEndpoint(
+                'Users List (ohne Auth)',
+                `${apiBase}/users.php?action=list`
+            );
+            
+            // Test 4: Settings Get (should fail without auth)
+            await testEndpoint(
+                'Settings Get (ohne Auth)',
+                `${apiBase}/settings.php?action=get`
+            );
+            
+            // Test 5: Email SMTP Get (should fail without auth)
+            await testEndpoint(
+                'Email SMTP Config (ohne Auth)',
+                `${apiBase}/email.php?action=get_smtp`
+            );
+            
+            // Test 6: Cron Jobs List (should fail without auth)
+            await testEndpoint(
+                'Cron Jobs List (ohne Auth)',
+                `${apiBase}/cron.php?action=list`
+            );
+            
+            // Test 7: Backup List (should fail without auth)
+            await testEndpoint(
+                'Backup List (ohne Auth)',
+                `${apiBase}/backup.php?action=list`
+            );
+            
+            // Test 8: Update Check (should fail without auth)
+            await testEndpoint(
+                'Update Check (ohne Auth)',
+                `${apiBase}/update.php?action=check`
+            );
+            
+            // Test 9: Finance List (should fail without auth)
+            await testEndpoint(
+                'Finance Items List (ohne Auth)',
+                `${apiBase}/finance.php?action=list`
+            );
+            
+            // Test 10: Invoice Design Get (should fail without auth)
+            await testEndpoint(
+                'Invoice Design Get (ohne Auth)',
+                `${apiBase}/invoice.php?action=get`
+            );
+            
+            // Test 11: Modules List (should fail without auth)
+            await testEndpoint(
+                'Modules List (ohne Auth)',
+                `${apiBase}/modules.php?action=list`
+            );
+            
+            // Summary
+            const totalTests = document.querySelectorAll('#results > div').length;
+            const successTests = document.querySelectorAll('#results > div.bg-green-50').length;
+            const failedTests = document.querySelectorAll('#results > div.bg-red-50').length;
+            
+            if (failedTests === 0) {
+                updateStatus(`✅ Alle ${totalTests} Tests erfolgreich!`, 'success');
+                log(`\nAll ${totalTests} tests passed successfully!`, 'success');
+            } else {
+                updateStatus(`⚠️ ${successTests}/${totalTests} Tests erfolgreich, ${failedTests} fehlgeschlagen`, 'error');
+                log(`\nTest Summary: ${successTests}/${totalTests} passed, ${failedTests} failed`, 'error');
+            }
+            
+            // Check if admin tables are created
+            log('\nChecking admin panel readiness...');
+            try {
+                const response = await fetch('/admin/api/test_admin_json.php');
+                const data = await response.json();
+                if (data.data && data.data.admin_panel_ready) {
+                    log('✅ Admin Panel is ready! All tables created.', 'success');
+                    log(`  - Roles: ${data.data.roles}`, 'success');
+                    log(`  - Permissions: ${data.data.permissions}`, 'success');
+                    log(`  - Email Templates: ${data.data.email_templates}`, 'success');
+                    log(`  - Cron Jobs: ${data.data.cron_jobs}`, 'success');
+                    log(`  - Modules: ${data.data.modules}`, 'success');
+                } else {
+                    log('⚠️ Admin Panel tables may not be fully created', 'error');
+                }
+            } catch (error) {
+                log('Could not check admin panel readiness', 'error');
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

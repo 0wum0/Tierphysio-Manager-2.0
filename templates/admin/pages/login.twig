@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Tierphysio Manager</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#9b5de5',
+                        accent: '#6c63ff'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600">
+    <div class="w-full max-w-md">
+        <!-- Login Card -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <!-- Logo/Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full mb-4">
+                    <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Admin Panel</h1>
+                <p class="text-gray-600 mt-2">Tierphysio Manager 2.0</p>
+            </div>
+            
+            <!-- Error Message -->
+            {% if error %}
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            <!-- Login Form -->
+            <form method="POST" action="/admin/login.php" x-data="{ loading: false }" @submit="loading = true">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                
+                <!-- Email Field -->
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        E-Mail-Adresse
+                    </label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           required 
+                           autofocus
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                           placeholder="admin@beispiel.de">
+                </div>
+                
+                <!-- Password Field -->
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Passwort
+                    </label>
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                           placeholder="••••••••">
+                </div>
+                
+                <!-- Remember Me -->
+                <div class="mb-6 flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="remember" class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                        <span class="ml-2 text-sm text-gray-600">Angemeldet bleiben</span>
+                    </label>
+                    <a href="#" class="text-sm text-purple-600 hover:text-purple-700">
+                        Passwort vergessen?
+                    </a>
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" 
+                        :disabled="loading"
+                        class="w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-200 disabled:opacity-50">
+                    <span x-show="!loading">Anmelden</span>
+                    <span x-show="loading" class="flex items-center justify-center">
+                        <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Anmeldung läuft...
+                    </span>
+                </button>
+            </form>
+            
+            <!-- Footer -->
+            <div class="mt-6 text-center">
+                <a href="/" class="text-sm text-gray-600 hover:text-gray-800">
+                    ← Zurück zur Hauptseite
+                </a>
+            </div>
+        </div>
+        
+        <!-- Copyright -->
+        <p class="text-center text-white text-sm mt-6">
+            &copy; {{ "now"|date("Y") }} Tierphysio Manager - Alle Rechte vorbehalten
+        </p>
+    </div>
+</body>
+</html>

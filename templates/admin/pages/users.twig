@@ -1,0 +1,189 @@
+{% extends 'admin/layout.twig' %}
+
+{% set current_page = 'users' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Benutzerverwaltung</h1>
+        <button onclick="openCreateUserModal()" 
+                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Neuer Benutzer
+        </button>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="glass-panel rounded-lg overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">E-Mail</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rolle</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Erstellt</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                {% for user in users %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-semibold">
+                                {{ user.name|first|upper }}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium">{{ user.name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm">{{ user.email }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm">{{ user.role }}</div>
+                        {% if user.roles %}
+                        <div class="text-xs text-gray-500">{{ user.roles }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ user.status == 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            {{ user.status == 'active' ? 'Aktiv' : 'Inaktiv' }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ user.created_at|date('d.m.Y') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="editUser({{ user.id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">Bearbeiten</button>
+                        <button onclick="deleteUser({{ user.id }})" class="text-red-600 hover:text-red-900">Löschen</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div id="userModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4">Benutzer bearbeiten</h2>
+        <form id="userForm">
+            <input type="hidden" id="userId" name="id">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Name</label>
+                <input type="text" name="name" required class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">E-Mail</label>
+                <input type="email" name="email" required class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Passwort</label>
+                <input type="password" name="password" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+                <p class="text-xs text-gray-500 mt-1">Leer lassen um bestehendes Passwort beizubehalten</p>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Rollen</label>
+                {% for role in roles %}
+                <label class="flex items-center mb-2">
+                    <input type="checkbox" name="role_ids[]" value="{{ role.id }}" class="mr-2">
+                    <span>{{ role.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeUserModal()" class="px-4 py-2 border rounded-lg">Abbrechen</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openCreateUserModal() {
+    document.getElementById('userModal').classList.remove('hidden');
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = '';
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').classList.add('hidden');
+}
+
+function editUser(id) {
+    // Load user data via API
+    fetch(`/admin/api/users.php?action=get&id=${id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('userId').value = data.data.id;
+                document.querySelector('[name="name"]').value = data.data.name;
+                document.querySelector('[name="email"]').value = data.data.email;
+                document.getElementById('userModal').classList.remove('hidden');
+            }
+        });
+}
+
+function deleteUser(id) {
+    if (!confirm('Benutzer wirklich löschen?')) return;
+    
+    fetch('/admin/api/users.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': window.csrfToken
+        },
+        body: JSON.stringify({
+            action: 'delete',
+            id: id,
+            csrf_token: window.csrfToken
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.message);
+        }
+    });
+}
+
+document.getElementById('userForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    data.action = data.id ? 'update' : 'create';
+    
+    fetch('/admin/api/users.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': window.csrfToken
+        },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.status === 'success') {
+            location.reload();
+        } else {
+            alert('Fehler: ' + result.message);
+        }
+    });
+});
+</script>
+{% endblock %}
