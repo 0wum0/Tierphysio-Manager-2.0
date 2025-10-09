@@ -35,6 +35,20 @@ function render_template($path, $data = []) {
         // Add debug extension
         $twig->addExtension(new \Twig\Extension\DebugExtension());
         
+        // Translation helper function
+        if (!function_exists('__')) {
+            function __($text) {
+                // Future localization logic can go here (e.g. from lang files)
+                // For now, just return the same text
+                return $text;
+            }
+        }
+        
+        // Register translation function with Twig
+        $twig->addFunction(new \Twig\TwigFunction('__', function ($text) {
+            return __($text);
+        }));
+        
         // Add custom functions
         $twig->addFunction(new \Twig\TwigFunction('csrf_token', function() {
             if (session_status() === PHP_SESSION_NONE) {
