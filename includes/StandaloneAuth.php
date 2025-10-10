@@ -97,12 +97,7 @@ class Auth {
      * Check if user is admin
      */
     public function isAdmin() {
-        // Check both user object and session for role
-        if ($this->user && $this->user['role'] === 'admin') {
-            return true;
-        }
-        // Also check session directly
-        return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+        return $this->user && $this->user['role'] === 'admin';
     }
     
     /**
@@ -176,7 +171,6 @@ class Auth {
             // Set session - konsistent mit auth.php login_user()
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_role'] = $user['role'];
-            $_SESSION['role'] = $user['role']; // Add direct role for template access
             $_SESSION['login_time'] = time();
             
             // Speichere erweiterte User-Daten

@@ -83,17 +83,7 @@ function is_logged_in() {
  * Check if user is admin
  */
 function is_admin() {
-    // Check multiple locations for admin role
-    if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin') {
-        return true;
-    }
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-        return true;
-    }
-    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
-        return true;
-    }
-    return false;
+    return isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin';
 }
 
 /**
@@ -108,7 +98,6 @@ function login_user($user_data) {
     // Setze die gleichen Session-Variablen wie StandaloneAuth
     $_SESSION['user_id'] = $user_data['id'];
     $_SESSION['user_role'] = $user_data['role'] ?? 'guest';
-    $_SESSION['role'] = $user_data['role'] ?? 'guest'; // Add direct role for template access
     $_SESSION['login_time'] = time();
     
     // Speichere auch erweiterte User-Daten für Kompatibilität
