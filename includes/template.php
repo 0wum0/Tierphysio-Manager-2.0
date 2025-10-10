@@ -49,28 +49,9 @@ if (!isset($twig)) {
         return $text;
     }));
     
-    // CSRF Token Verifier
     $twig->addFunction(new \Twig\TwigFunction('csrf_token', function() {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
+        return $_SESSION['csrf_token'] ?? '';
     }));
-    
-    // CSRF Field Generator
-    $twig->addFunction(new \Twig\TwigFunction('csrf_field', function() {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
-        return '<input type="hidden" name="csrf_token" value="'.$token.'">';
-    }, ['is_safe' => ['html']]));
     
     $twig->addFunction(new \Twig\TwigFunction('current_user', function() {
         if (function_exists('current_user')) {
@@ -128,28 +109,9 @@ function render_template($template, $data = []) {
         return $text;
     }));
     
-    // CSRF Token Verifier
     $twig->addFunction(new \Twig\TwigFunction('csrf_token', function() {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
+        return $_SESSION['csrf_token'] ?? '';
     }));
-    
-    // CSRF Field Generator
-    $twig->addFunction(new \Twig\TwigFunction('csrf_field', function() {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
-        return '<input type="hidden" name="csrf_token" value="'.$token.'">';
-    }, ['is_safe' => ['html']]));
     
     $twig->addFunction(new \Twig\TwigFunction('current_user', function() {
         if (function_exists('current_user')) {
