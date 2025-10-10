@@ -6,6 +6,9 @@
 
 require_once __DIR__ . '/_bootstrap.php';
 
+// Ensure JSON header is always sent
+header('Content-Type: application/json; charset=utf-8');
+
 // Get action from request
 $action = $_GET['action'] ?? 'list';
 
@@ -39,7 +42,7 @@ try {
                 $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 api_success(['patients' => $patients, 'count' => count($patients)]);
             } catch (Exception $e) {
-                error_log('[PatientsAPI][list] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
+                error_log('[PatientsAPI][list] '.$e->getMessage()."\n", 3, __DIR__.'/../logs/api.log');
                 api_error("Fehler beim Laden der Patienten: ".$e->getMessage());
             }
             break;
@@ -548,7 +551,8 @@ try {
             break;
             
         default:
-            api_error("Unbekannte Aktion: " . $action, 400);
+            api_error("Unbekannte Aktion: " . $action);
+            break;
     }
     
 } catch (PDOException $e) {
