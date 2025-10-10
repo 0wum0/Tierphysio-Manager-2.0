@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $remember = isset($_POST['remember']);
     
     // Verify CSRF token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== ($_SESSION['csrf_token'] ?? '')) {
+    if (!$auth->verifyCSRFToken($_POST['_csrf_token'] ?? '')) {
         flash('error', 'Ungültiger Sicherheitstoken. Bitte versuchen Sie es erneut.');
     } else {
         $result = $auth->login($username, $password, $remember);
