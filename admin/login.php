@@ -3,33 +3,38 @@
  * Admin Login Page
  */
 
-// Temporär die Bootstrap-Umleitung überschreiben für Login-Seite
-$_SKIP_AUTH_CHECK = true;
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-// Session muss VOR bootstrap.php gestartet werden
+// Start session
 if (session_status() === PHP_SESSION_NONE) {
-    session_name('tierphysio_session');
     session_start();
 }
 
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/StandaloneAuth.php';
-
-// PDO-Verbindung herstellen
-$pdo = pdo();
-
-// Auth-Instanz erstellen  
-$auth = new Auth();
+$auth = new StandaloneAuth($pdo);
 
 // Debug-Logging
 error_log("[AUTH DEBUG] admin/login.php - Session user_id: " . ($_SESSION['user_id'] ?? 'none'));
-error_log("[AUTH DEBUG] admin/login.php - Session role: " . ($_SESSION['role'] ?? 'none'));
 
-// Wenn bereits als Admin eingeloggt, weiterleiten zum Dashboard
-if ($auth->isLoggedIn() && $auth->isAdmin()) {
-    error_log("[AUTH DEBUG] admin/login.php - User is admin, redirecting to dashboard");
-    header('Location: /admin/index.php');
-    exit;
+// If already logged in as admin, redirect to dashboard
+if ($auth->isLoggedIn()) {
+    $userId = $auth->getUserId();
+    error_log("[AUTH DEBUG] admin/login.php - User is logged in with ID: $userId");
+    
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM tp_user_roles ur 
+        JOIN tp_roles r ON ur.role_id = r.id 
+        WHERE ur.user_id = ? AND r.name = 'admin'
+    ");
+    $stmt->execute([$userId]);
+    
+    if ($stmt->fetchColumn() > 0) {
+        error_log("[AUTH DEBUG] admin/login.php - User is admin, redirecting to dashboard");
+        header('Location: /admin/dashboard.php');
+        exit;
+    } else {
+        error_log("[AUTH DEBUG] admin/login.php - User is not admin");
+    }
 }
 
 $error = '';
@@ -65,13 +70,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = $_POST['email'] ?? '';
             $password = $_POST['password'] ?? '';
             
-            $result = $auth->login($email, $password);
-            
-            if ($result['success']) {
-                // Login war erfolgreich, prüfe Admin-Rolle
-                if ($auth->isAdmin()) {
+            if ($auth->login($email, $password)) {
+                $userId = $auth->getUserId();
+                
+                // Check if user has admin role
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) 
+                    FROM tp_user_roles ur 
+                    JOIN tp_roles r ON ur.role_id = r.id 
+                    WHERE ur.user_id = ? AND r.name = 'admin'
+                ");
+                $stmt->execute([$userId]);
+                
+                if ($stmt->fetchColumn() > 0) {
                     // Admin login successful
-                    error_log("[AUTH DEBUG] admin/login.php - Admin login successful for user " . $auth->getUserId());
+                    // Setze normale Session-Variablen (auth->login hat bereits user_id gesetzt)
+                    $_SESSION['admin']['user_id'] = $userId;
+                    $_SESSION['admin']['logged_in'] = true;
+                    $_SESSION['admin']['csrf_token'] = bin2hex(random_bytes(32));
+                    
+                    error_log("[AUTH DEBUG] admin/login.php - Admin login successful for user $userId");
                     
                     // Clear login attempts
                     unset($_SESSION['admin_login_attempts']);
@@ -81,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Regenerate session ID for security
                     session_regenerate_id(true);
                     
-                    header('Location: /admin/index.php');
+                    header('Location: /admin/dashboard.php');
                     exit;
                 } else {
                     // User exists but is not an admin
@@ -116,8 +134,5 @@ $templateData = [
     'title' => 'Admin Login'
 ];
 
-// Template Engine laden
-require_once __DIR__ . '/../includes/template.php';
-
 // Render login template
-echo render_template('admin/pages/login.twig', $templateData);
+echo $twig->render('admin/pages/login.twig', $templateData);

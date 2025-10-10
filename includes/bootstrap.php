@@ -183,54 +183,36 @@ $publicPages = [
 
 $currentFile = basename($_SERVER['PHP_SELF'] ?? '');
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-$isAdminPage = str_contains($scriptName, '/admin/');
-$isPublicArea = str_contains($scriptName, '/public/');
-$isApiArea = str_contains($scriptName, '/api/');
+$isAdminPage = str_contains($requestUri, '/admin/');
+$isPublicArea = strpos($requestUri, '/public/') !== false;
+$isApiArea = strpos($requestUri, '/api/') !== false;
 
 // Debug-Logging für Authentifizierung
-error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | Role: " . ($_SESSION['role'] ?? 'none') . " | isAdmin: " . ($isAdminPage ? 'yes' : 'no'));
+error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | isAdmin: " . ($isAdminPage ? 'yes' : 'no'));
 
-// Redirect logic - NUR für Protected Pages
+// Redirect logic
 if (!in_array($currentFile, $publicPages)) {
-    // Nicht eingeloggt -> zum entsprechenden Login
     if (!$auth->isLoggedIn()) {
         error_log("[AUTH DEBUG] User not logged in, redirecting to login");
-        
-        if ($isAdminPage) {
-            // Admin-Bereich -> Admin Login
-            header('Location: /admin/login.php');
-            exit;
-        } else {
-            // Public-Bereich -> Public Login
-            header('Location: /public/login.php');
-            exit;
-        }
+        header('Location: /login.php');
+        exit;
     }
 
-    // Eingeloggt aber im Admin-Bereich ohne Admin-Rechte
+    // Restrict admin area to admin users only
     if ($isAdminPage && !$auth->isAdmin()) {
-        error_log("[AUTH DEBUG] Non-admin user trying to access admin area, redirecting to public dashboard");
+        error_log("[AUTH DEBUG] Non-admin user trying to access admin area, redirecting to dashboard");
         header('Location: /public/dashboard.php');
         exit;
     }
 }
 
-// Prevent login redirect loop - nur für eingeloggte User auf Login-Seiten
+// Prevent login redirect loop
 if ($currentFile === 'login.php' && $auth->isLoggedIn()) {
     error_log("[AUTH DEBUG] User already logged in, redirecting from login.php");
-    
-    // Bestimme Ziel basierend auf Rolle
     if ($auth->isAdmin()) {
-        // Admin kann wählen - wenn er von Admin-Login kommt, zum Admin-Dashboard
-        if ($isAdminPage) {
-            header('Location: /admin/index.php');
-        } else {
-            header('Location: /public/dashboard.php');
-        }
+        header('Location: /admin/index.php');
         exit;
     } else {
-        // Normale User immer zum Public Dashboard
         header('Location: /public/dashboard.php');
         exit;
     }
