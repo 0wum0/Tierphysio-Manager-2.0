@@ -47,11 +47,19 @@ function generatePatientNumber($pdo) {
  */
 function api_success($data = null, $message = 'Success') {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'status' => 'success',
-        'message' => $message,
-        'data' => $data
-    ] + ($data ?: []), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    
+    // Merge data if it's an array, otherwise wrap in data key
+    if (is_array($data)) {
+        $response = array_merge(['status' => 'success'], $data);
+    } else {
+        $response = [
+            'status' => 'success',
+            'message' => $message,
+            'data' => $data
+        ];
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
