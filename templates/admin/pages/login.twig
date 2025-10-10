@@ -47,7 +47,7 @@
             
             <!-- Login Form -->
             <form method="POST" action="/admin/login.php" x-data="{ loading: false }" @submit="loading = true">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {{ csrf_field()|raw }}
                 
                 <!-- Email Field -->
                 <div class="mb-4">

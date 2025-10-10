@@ -3,6 +3,7 @@
 <div class="p-4">
   <h1 class="text-2xl font-bold mb-4">🐾 Besitzer bearbeiten</h1>
   <form method="post" action="owners.php?action=update" class="grid grid-cols-2 gap-4">
+    {{ csrf_field()|raw }}
     <input type="hidden" name="id" value="{{ owner.id }}">
     <div><label>Vorname</label><input name="first_name" value="{{ owner.first_name }}" class="border p-2 w-full rounded"></div>
     <div><label>Nachname</label><input name="last_name" value="{{ owner.last_name }}" class="border p-2 w-full rounded"></div>
