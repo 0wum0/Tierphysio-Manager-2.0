@@ -383,22 +383,172 @@ try {
             break;
             
         case 'get_notes':
-            $id = intval($_GET['id'] ?? 0);
+            $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
             
-            if (!$id) {
+            if (!$patient_id) {
                 api_error('Patient ID fehlt', 400);
             }
             
             $stmt = $pdo->prepare("
-                SELECT id, title, content, created_at 
+                SELECT id, title, content, type, created_at 
                 FROM tp_notes 
-                WHERE patient_id = ? 
+                WHERE patient_id = ? AND type = 'general'
                 ORDER BY created_at DESC
             ");
-            $stmt->execute([$id]);
+            $stmt->execute([$patient_id]);
             $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             api_success(['notes' => $notes]);
+            break;
+            
+        case 'get_records':
+            $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
+            
+            if (!$patient_id) {
+                api_error('Patient ID fehlt', 400);
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT id, title, content, type, created_at 
+                FROM tp_notes 
+                WHERE patient_id = ? AND type = 'medical'
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$patient_id]);
+            $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            api_success(['records' => $records]);
+            break;
+            
+        case 'get_documents':
+            $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
+            
+            if (!$patient_id) {
+                api_error('Patient ID fehlt', 400);
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT id, type, title, file_path, created_at 
+                FROM tp_documents 
+                WHERE patient_id = ? 
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$patient_id]);
+            $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            api_success(['documents' => $documents]);
+            break;
+            
+        case 'save_record':
+            $input = json_decode(file_get_contents("php://input"), true);
+            $patient_id = intval($input['patient_id'] ?? 0);
+            $content = trim($input['content'] ?? '');
+            
+            if (!$patient_id || !$content) {
+                api_error('Patient ID und Inhalt sind erforderlich', 400);
+            }
+            
+            // Get user ID from session or use default
+            session_start();
+            $user_id = $_SESSION['user_id'] ?? 1;
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO tp_notes (patient_id, type, content, created_by, created_at) 
+                VALUES (?, 'medical', ?, ?, NOW())
+            ");
+            $stmt->execute([$patient_id, $content, $user_id]);
+            $id = $pdo->lastInsertId();
+            
+            $stmt = $pdo->prepare("SELECT * FROM tp_notes WHERE id = ?");
+            $stmt->execute([$id]);
+            $record = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            api_success(['record' => $record]);
+            break;
+            
+        case 'save_note':
+            $input = json_decode(file_get_contents("php://input"), true);
+            $patient_id = intval($input['patient_id'] ?? 0);
+            $content = trim($input['content'] ?? '');
+            
+            if (!$patient_id || !$content) {
+                api_error('Patient ID und Inhalt sind erforderlich', 400);
+            }
+            
+            // Get user ID from session or use default
+            session_start();
+            $user_id = $_SESSION['user_id'] ?? 1;
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO tp_notes (patient_id, type, content, created_by, created_at) 
+                VALUES (?, 'general', ?, ?, NOW())
+            ");
+            $stmt->execute([$patient_id, $content, $user_id]);
+            $id = $pdo->lastInsertId();
+            
+            $stmt = $pdo->prepare("SELECT * FROM tp_notes WHERE id = ?");
+            $stmt->execute([$id]);
+            $note = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            api_success(['note' => $note]);
+            break;
+            
+        case 'upload_pdf':
+            if (!isset($_FILES['file'])) {
+                api_error("Keine Datei empfangen", 400);
+            }
+            
+            $patient_id = intval($_POST['patient_id'] ?? 0);
+            if (!$patient_id) {
+                api_error('Patient ID fehlt', 400);
+            }
+            
+            $file = $_FILES['file'];
+            $filename = basename($file['name']);
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            
+            // Validate file type
+            $allowed_extensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+            if (!in_array(strtolower($extension), $allowed_extensions)) {
+                api_error('Ungültiger Dateityp', 400);
+            }
+            
+            // Generate unique filename
+            $unique_filename = uniqid() . '_' . $filename;
+            $target_dir = __DIR__ . '/../public/uploads/docs/';
+            $target_file = $target_dir . $unique_filename;
+            
+            // Create directory if not exists
+            if (!file_exists($target_dir)) {
+                mkdir($target_dir, 0755, true);
+            }
+            
+            if (move_uploaded_file($file['tmp_name'], $target_file)) {
+                // Get user ID from session or use default
+                session_start();
+                $user_id = $_SESSION['user_id'] ?? 1;
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO tp_documents (patient_id, type, title, file_path, uploaded_by, created_at) 
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([
+                    $patient_id, 
+                    $extension, 
+                    $filename, 
+                    '/public/uploads/docs/' . $unique_filename, 
+                    $user_id
+                ]);
+                $id = $pdo->lastInsertId();
+                
+                $stmt = $pdo->prepare("SELECT * FROM tp_documents WHERE id = ?");
+                $stmt->execute([$id]);
+                $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                api_success(['doc' => $doc]);
+            } else {
+                api_error('Fehler beim Hochladen der Datei', 500);
+            }
             break;
             
         case 'delete':
