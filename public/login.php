@@ -4,15 +4,10 @@
  * Login Page
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../includes/version.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
-use TierphysioManager\Auth;
-use TierphysioManager\Template;
-
-// Initialize services
-$auth = Auth::getInstance();
-$template = Template::getInstance();
+// Auth instance is already created in bootstrap.php
+// $auth is available
 
 // Redirect if already logged in
 if ($auth->isLoggedIn()) {
@@ -28,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Verify CSRF token
     if (!$auth->verifyCSRFToken($_POST['_csrf_token'] ?? '')) {
-        Template::setFlash('error', 'Ungültiger Sicherheitstoken. Bitte versuchen Sie es erneut.');
+        flash('error', 'Ungültiger Sicherheitstoken. Bitte versuchen Sie es erneut.');
     } else {
         $result = $auth->login($username, $password, $remember);
         
@@ -36,10 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit;
         } else {
-            Template::setFlash('error', $result['message']);
+            flash('error', $result['message']);
         }
     }
 }
 
 // Display login page
-$template->display('pages/login.twig');
+echo $twig->render('pages/login.twig', [
+    'csrf_token' => $auth->generateCSRFToken()
+]);
