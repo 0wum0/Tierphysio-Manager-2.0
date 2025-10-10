@@ -9,6 +9,9 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+// Ensure documents table exists with all required columns
+require_once __DIR__ . '/../includes/auto_migrate_documents.php';
+
 // Define API response functions if not already defined
 if (!function_exists('api_success')) {
     function api_success($data = []) {
@@ -710,6 +713,101 @@ switch ($action) {
             api_success(['message'=>'Bild erfolgreich gespeichert.','path'=>$relative,'id'=>$id]);
         } catch (Exception $e) {
             api_error('Fehler: '.$e->getMessage());
+        }
+        break;
+        
+    case 'upload_document':
+        try {
+            if (empty($_FILES['file']) || empty($_POST['id'])) {
+                api_error('Kein Dokument oder keine Patienten-ID übergeben.');
+            }
+
+            $patient_id = intval($_POST['id']);
+            $file = $_FILES['file'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed = ['pdf','jpg','jpeg','png','gif','webp'];
+            if (!in_array($ext, $allowed)) {
+                api_error('Ungültiges Dateiformat.');
+            }
+
+            $uploadDir = __DIR__ . '/../uploads/patients/' . $patient_id . '/docs/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0775, true);
+
+            $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/','_', $file['name']);
+            $targetPath = $uploadDir . $filename;
+            $relativePath = 'uploads/patients/' . $patient_id . '/docs/' . $filename;
+
+            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                api_error('Fehler beim Upload.');
+            }
+
+            // Get session for user ID
+            session_start();
+            $user_id = $_SESSION['user_id'] ?? 0;
+
+            $stmt = $pdo->prepare("
+                INSERT INTO tp_documents (patient_id, title, file_name, file_path, file_size, mime_type, uploaded_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $patient_id,
+                pathinfo($file['name'], PATHINFO_FILENAME),
+                $filename,
+                $relativePath,
+                $file['size'],
+                $file['type'],
+                $user_id
+            ]);
+
+            $docId = $pdo->lastInsertId();
+            $doc = $pdo->query("SELECT * FROM tp_documents WHERE id = $docId")->fetch(PDO::FETCH_ASSOC);
+
+            api_success(['message'=>'Dokument erfolgreich hochgeladen.','document'=>$doc]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Hochladen: '.$e->getMessage());
+        }
+        break;
+
+    case 'delete_document':
+        try {
+            $id = intval($_GET['id'] ?? 0);
+            if ($id <= 0) api_error('Ungültige Dokument-ID.');
+
+            $stmt = $pdo->prepare("SELECT * FROM tp_documents WHERE id=?");
+            $stmt->execute([$id]);
+            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$doc) api_error('Dokument nicht gefunden.');
+
+            // Delete file from filesystem
+            $path = __DIR__.'/../'.$doc['file_path'];
+            if (file_exists($path)) {
+                if (!unlink($path)) {
+                    error_log('Failed to delete file: ' . $path);
+                }
+            }
+
+            // Delete database record
+            $stmt = $pdo->prepare("DELETE FROM tp_documents WHERE id=?");
+            $stmt->execute([$id]);
+            
+            api_success(['message'=>'Dokument erfolgreich gelöscht.']);
+        } catch (Exception $e) {
+            api_error('Fehler beim Löschen: '.$e->getMessage());
+        }
+        break;
+
+    case 'list_documents':
+        try {
+            $patient_id = intval($_GET['id'] ?? 0);
+            if ($patient_id <= 0) api_error('Ungültige Patienten-ID.');
+
+            $stmt = $pdo->prepare("SELECT * FROM tp_documents WHERE patient_id=? ORDER BY created_at DESC");
+            $stmt->execute([$patient_id]);
+            $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            api_success(['documents'=>$docs]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Abrufen der Dokumente: '.$e->getMessage());
         }
         break;
         
