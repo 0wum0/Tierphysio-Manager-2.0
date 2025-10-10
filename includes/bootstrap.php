@@ -171,51 +171,67 @@ if (!function_exists('flash')) {
     }
 }
 
-// =================================================================================
-// FINALE REDIRECT-LOGIK FÜR PUBLIC LOGIN FIX
-// =================================================================================
+// Globale Whitelist für öffentliche Seiten (keine Authentifizierung erforderlich)
+$publicPages = [
+    'login.php',
+    'logout.php',
+    'install.php',
+    'forgot_password.php',
+    'setup_db.php',
+    'run_migration.php'
+];
 
-$currentFile = basename($_SERVER['SCRIPT_NAME']);
-$currentDir  = basename(dirname($_SERVER['SCRIPT_FILENAME']));
-$userRole    = $_SESSION['role'] ?? null;
-$isLoggedIn  = isset($_SESSION['user_id']);
+$currentFile = basename($_SERVER['PHP_SELF'] ?? '');
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+$isAdminPage = str_contains($scriptName, '/admin/');
+$isPublicArea = str_contains($scriptName, '/public/');
+$isApiArea = str_contains($scriptName, '/api/');
 
-// Allow login and logout pages without redirects
-$publicLoginWhitelist = ['login.php', 'logout.php', 'install.php', 'setup_db.php', 'run_migration.php'];
+// Debug-Logging für Authentifizierung
+error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | Role: " . ($_SESSION['role'] ?? 'none') . " | isAdmin: " . ($isAdminPage ? 'yes' : 'no'));
 
-// Debug logging
-error_log("[BOOTSTRAP DEBUG] File: $currentFile | Dir: $currentDir | Logged in: " . ($isLoggedIn ? 'yes' : 'no') . " | Role: " . ($userRole ?? 'none'));
-
-if ($currentDir === 'admin') {
-    // Admin area
-    if (!$isLoggedIn && !in_array($currentFile, $publicLoginWhitelist)) {
-        error_log("[BOOTSTRAP DEBUG] Admin area - not logged in, redirecting to admin login");
-        header('Location: /admin/login.php');
-        exit;
-    }
-    if ($isLoggedIn && $userRole !== 'admin') {
-        error_log("[BOOTSTRAP DEBUG] Admin area - non-admin user, redirecting to public dashboard");
-        header('Location: /public/dashboard.php');
-        exit;
-    }
-} elseif ($currentDir === 'public' || str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/public/')) {
-    // Public area - only check if NOT in whitelist
-    if (!in_array($currentFile, $publicLoginWhitelist)) {
-        if (!$isLoggedIn) {
-            error_log("[BOOTSTRAP DEBUG] Public area - not logged in, not whitelisted, redirecting to login");
+// Redirect logic - NUR für Protected Pages
+if (!in_array($currentFile, $publicPages)) {
+    // Nicht eingeloggt -> zum entsprechenden Login
+    if (!$auth->isLoggedIn()) {
+        error_log("[AUTH DEBUG] User not logged in, redirecting to login");
+        
+        if ($isAdminPage) {
+            // Admin-Bereich -> Admin Login
+            header('Location: /admin/login.php');
+            exit;
+        } else {
+            // Public-Bereich -> Public Login
             header('Location: /public/login.php');
             exit;
         }
     }
+
+    // Eingeloggt aber im Admin-Bereich ohne Admin-Rechte
+    if ($isAdminPage && !$auth->isAdmin()) {
+        error_log("[AUTH DEBUG] Non-admin user trying to access admin area, redirecting to public dashboard");
+        header('Location: /public/dashboard.php');
+        exit;
+    }
+}
+
+// Prevent login redirect loop - nur für eingeloggte User auf Login-Seiten
+if ($currentFile === 'login.php' && $auth->isLoggedIn()) {
+    error_log("[AUTH DEBUG] User already logged in, redirecting from login.php");
     
-    // Prevent logged-in users from seeing login page
-    if ($isLoggedIn && $currentFile === 'login.php') {
-        error_log("[BOOTSTRAP DEBUG] Public area - logged in user on login page, redirecting");
-        if ($userRole === 'admin') {
+    // Bestimme Ziel basierend auf Rolle
+    if ($auth->isAdmin()) {
+        // Admin kann wählen - wenn er von Admin-Login kommt, zum Admin-Dashboard
+        if ($isAdminPage) {
             header('Location: /admin/index.php');
         } else {
             header('Location: /public/dashboard.php');
         }
+        exit;
+    } else {
+        // Normale User immer zum Public Dashboard
+        header('Location: /public/dashboard.php');
         exit;
     }
 }
