@@ -39,7 +39,7 @@ $pdo = get_pdo();
 // Set charset for proper UTF-8 handling (only for MySQL)
 try {
     if (!defined('DB_TYPE') || DB_TYPE !== 'sqlite') {
-        $pdo->query("SET NAMES utf8mb4");
+        $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     }
 } catch (Exception $e) {
     api_error('DB-Verbindung fehlgeschlagen: ' . $e->getMessage());
@@ -49,6 +49,11 @@ try {
 switch ($action) {
     case 'list':
         try {
+            // Use different syntax for SQLite vs MySQL
+            $concat_expr = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "COALESCE(o.first_name || ' ' || o.last_name, '')"
+                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
+            
             $sql = "
                 SELECT 
                     p.id,
@@ -56,7 +61,7 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    o.first_name || ' ' || o.last_name AS owner_full_name,
+                    {$concat_expr} AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
@@ -72,16 +77,30 @@ switch ($action) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Konvertiere Owner-Feld immer zu Text
+            foreach ($patients as &$p) {
+                if (!isset($p['owner_full_name']) || is_numeric($p['owner_full_name'])) {
+                    $p['owner_full_name'] = '';
+                }
+            }
+            
             api_success(['patients' => $patients, 'count' => count($patients)]);
         } catch (Exception $e) {
             error_log('[PATIENTS][LIST] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
-            api_error('Fehler beim Laden der Patientenliste.');
+            api_error('Fehler beim Laden der Patientenliste: ' . $e->getMessage());
         }
         break;
         
     case 'search':
         try {
             $keyword = trim($_GET['q'] ?? '');
+            
+            // Use different syntax for SQLite vs MySQL
+            $concat_expr = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "COALESCE(o.first_name || ' ' || o.last_name, '')"
+                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
+            
             $sql = "
                 SELECT 
                     p.id,
@@ -89,7 +108,7 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    o.first_name || ' ' || o.last_name AS owner_full_name,
+                    {$concat_expr} AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
@@ -115,10 +134,18 @@ switch ($action) {
             $stmt->execute();
             
             $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Konvertiere Owner-Feld immer zu Text
+            foreach ($patients as &$p) {
+                if (!isset($p['owner_full_name']) || is_numeric($p['owner_full_name'])) {
+                    $p['owner_full_name'] = '';
+                }
+            }
+            
             api_success(['patients' => $patients, 'count' => count($patients)]);
         } catch (Exception $e) {
             error_log('[PATIENTS][SEARCH] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
-            api_error('Fehler bei der Suche.');
+            api_error('Fehler bei der Suche: ' . $e->getMessage());
         }
         break;
 
