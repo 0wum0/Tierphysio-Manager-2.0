@@ -1,75 +1,139 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Patients API Endpoint - Unified JSON Response Format
+ * Patients API Endpoint - Restored Working Version
  */
 
+// 1️⃣ Full safe header + JSON enforcement at top
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-$action = $_GET['action'] ?? '';
+// Define API response functions if not already defined
+if (!function_exists('api_success')) {
+    function api_success($data = []) {
+        echo json_encode(array_merge(['status' => 'success'], $data), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+if (!function_exists('api_error')) {
+    function api_error($msg) {
+        echo json_encode(['status' => 'error', 'message' => $msg], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+// 3️⃣ Create log directory if missing
+$logDir = __DIR__ . '/../logs';
+if (!is_dir($logDir)) {
+    mkdir($logDir, 0775, true);
+}
+
+// Get action parameter
+$action = $_GET['action'] ?? 'list';
 
 // Get database connection
 $pdo = get_pdo();
 
+// Set charset for proper UTF-8 handling (only for MySQL)
 try {
-    
-    switch ($action) {
-        case 'list':
-        case 'search':
-            try {
-                $keyword = '';
-                $sql = "
-                    SELECT 
-                        p.id, p.name, p.species, p.image, p.is_active,
-                        CONCAT(o.first_name, ' ', o.last_name) AS owner_full_name,
-                        (SELECT MIN(a.appointment_date)
-                           FROM tp_appointments a
-                           WHERE a.patient_id = p.id
-                           AND a.status IN ('scheduled','confirmed')) AS next_appointment,
-                        (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END
-                           FROM tp_invoices i
-                           WHERE i.patient_id = p.id
-                           AND i.status != 'paid') AS invoice_status
-                    FROM tp_patients p
-                    LEFT JOIN tp_owners o ON o.id = p.owner_id
-                ";
+    if (!defined('DB_TYPE') || DB_TYPE !== 'sqlite') {
+        $pdo->query("SET NAMES utf8mb4");
+    }
+} catch (Exception $e) {
+    api_error('DB-Verbindung fehlgeschlagen: ' . $e->getMessage());
+}
 
-                // Falls eine Suchanfrage vorliegt
-                if ($action === 'search' && !empty($_GET['q'])) {
-                    $keyword = trim($_GET['q']);
-                    $sql .= " WHERE p.name LIKE :kw OR o.first_name LIKE :kw OR o.last_name LIKE :kw ";
-                }
-
-                $sql .= " ORDER BY p.created_at DESC";
-                $stmt = $pdo->prepare($sql);
-
-                if ($keyword) $stmt->bindValue(':kw', "%{$keyword}%");
-                $stmt->execute();
-
-                $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                api_success([
-                    'patients' => $patients ?: [],
-                    'count' => count($patients)
-                ]);
-
-            } catch (Exception $e) {
-                error_log('[PatientsAPI]['.$action.'] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
-                api_error('Fehler beim Laden der Patienten: '.$e->getMessage());
-            }
-            break;
+// 2️⃣ Restore clean action handlers
+switch ($action) {
+    case 'list':
+        try {
+            $sql = "
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.species,
+                    p.image,
+                    p.is_active,
+                    o.first_name || ' ' || o.last_name AS owner_full_name,
+                    (SELECT MIN(a.appointment_date)
+                       FROM tp_appointments a
+                       WHERE a.patient_id = p.id
+                         AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                    (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END
+                       FROM tp_invoices i
+                       WHERE i.patient_id = p.id
+                         AND i.status != 'paid') AS invoice_status
+                FROM tp_patients p
+                LEFT JOIN tp_owners o ON o.id = p.owner_id
+                ORDER BY p.created_at DESC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            api_success(['patients' => $patients, 'count' => count($patients)]);
+        } catch (Exception $e) {
+            error_log('[PATIENTS][LIST] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden der Patientenliste.');
+        }
+        break;
+        
+    case 'search':
+        try {
+            $keyword = trim($_GET['q'] ?? '');
+            $sql = "
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.species,
+                    p.image,
+                    p.is_active,
+                    o.first_name || ' ' || o.last_name AS owner_full_name,
+                    (SELECT MIN(a.appointment_date)
+                       FROM tp_appointments a
+                       WHERE a.patient_id = p.id
+                         AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                    (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END
+                       FROM tp_invoices i
+                       WHERE i.patient_id = p.id
+                         AND i.status != 'paid') AS invoice_status
+                FROM tp_patients p
+                LEFT JOIN tp_owners o ON o.id = p.owner_id
+            ";
             
-        case 'get':
+            if ($keyword) {
+                $sql .= " WHERE p.name LIKE :kw OR o.first_name LIKE :kw OR o.last_name LIKE :kw ";
+            }
+            
+            $sql .= " ORDER BY p.created_at DESC";
+            $stmt = $pdo->prepare($sql);
+            
+            if ($keyword) {
+                $stmt->bindValue(':kw', "%{$keyword}%");
+            }
+            $stmt->execute();
+            
+            $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            api_success(['patients' => $patients, 'count' => count($patients)]);
+        } catch (Exception $e) {
+            error_log('[PATIENTS][SEARCH] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler bei der Suche.');
+        }
+        break;
+
+    case 'get':
+        try {
             $id = intval($_GET['id'] ?? 0);
             
             if (!$id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
-            $stmt = $pdo->prepare("
+            // SQLite-compatible query
+            $sql = "
                 SELECT p.*, 
-                    CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
+                    o.first_name || ' ' || o.last_name AS owner_full_name,
                     o.customer_number,
                     o.first_name AS owner_first_name,
                     o.last_name AS owner_last_name,
@@ -80,10 +144,10 @@ try {
                     o.house_number AS owner_house_number,
                     o.postal_code AS owner_postal_code,
                     o.city AS owner_city,
-                    (SELECT DATE_FORMAT(MIN(a.appointment_date), '%d.%m.%Y') 
+                    (SELECT MIN(a.appointment_date)
                      FROM tp_appointments a 
                      WHERE a.patient_id = p.id 
-                     AND a.appointment_date >= CURDATE() 
+                     AND a.appointment_date >= date('now')
                      AND a.status IN ('scheduled','confirmed')) AS next_appointment,
                     (SELECT CASE 
                         WHEN COUNT(*) > 0 THEN 'open' 
@@ -94,35 +158,40 @@ try {
                      AND i.status != 'paid') AS invoice_status
                 FROM tp_patients p
                 LEFT JOIN tp_owners o ON o.id = p.owner_id
-                WHERE p.id = :id
-            ");
-            $stmt->execute(['id' => $id]);
+                WHERE p.id = ?
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$id]);
             $patient = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if (!$patient) {
-                api_error('Patient nicht gefunden', 404);
+            if ($patient) {
+                // Get treatment history
+                $stmt = $pdo->prepare("
+                    SELECT t.*, u.first_name AS therapist_first_name, u.last_name AS therapist_last_name
+                    FROM tp_treatments t
+                    LEFT JOIN tp_users u ON t.therapist_id = u.id
+                    WHERE t.patient_id = ?
+                    ORDER BY t.treatment_date DESC
+                    LIMIT 10
+                ");
+                $stmt->execute([$id]);
+                $patient['recent_treatments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Format boolean value
+                $patient['is_active'] = (bool) ($patient['is_active'] ?? true);
+                
+                api_success(['patient' => $patient]);
+            } else {
+                api_error('Patient nicht gefunden.');
             }
-            
-            // Get treatment history
-            $stmt = $pdo->prepare("
-                SELECT t.*, u.first_name AS therapist_first_name, u.last_name AS therapist_last_name
-                FROM tp_treatments t
-                LEFT JOIN tp_users u ON t.therapist_id = u.id
-                WHERE t.patient_id = ?
-                ORDER BY t.treatment_date DESC
-                LIMIT 10
-            ");
-            $stmt->execute([$id]);
-            $patient['recent_treatments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Format boolean value
-            $patient['is_active'] = (bool) ($patient['is_active'] ?? true);
-            
-            // Format the response with patient object directly for backward compatibility
-            api_success(['patient' => $patient, 'items' => [$patient]]);
-            break;
-            
-        case 'create':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][GET] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden des Patienten.');
+        }
+        break;
+        
+    case 'create':
+        try {
             // Get input data (support both form-data and JSON)
             $input = $_POST;
             if (empty($input)) {
@@ -150,11 +219,11 @@ try {
             
             // Validate required fields
             if (!$patient_name) {
-                api_error('Patientenname ist erforderlich', 400);
+                api_error('Patientenname ist erforderlich');
             }
             
             if (!$species) {
-                api_error('Tierart ist erforderlich', 400);
+                api_error('Tierart ist erforderlich');
             }
             
             // Begin transaction
@@ -179,7 +248,7 @@ try {
                     // Validate owner data
                     if (!$owner_first && !$owner_last && !$owner_company) {
                         $pdo->rollBack();
-                        api_error('Besitzer: Vor-/Nachname oder Firma erforderlich', 400);
+                        api_error('Besitzer: Vor-/Nachname oder Firma erforderlich');
                     }
                     
                     // Generate customer number
@@ -205,14 +274,14 @@ try {
                     // Verify owner exists
                     if (!$owner_id) {
                         $pdo->rollBack();
-                        api_error('Besitzer ID erforderlich', 400);
+                        api_error('Besitzer ID erforderlich');
                     }
                     
                     $stmt = $pdo->prepare("SELECT id FROM tp_owners WHERE id = ?");
                     $stmt->execute([$owner_id]);
                     if (!$stmt->fetch()) {
                         $pdo->rollBack();
-                        api_error('Besitzer nicht gefunden', 404);
+                        api_error('Besitzer nicht gefunden');
                     }
                 }
                 
@@ -251,15 +320,20 @@ try {
                 $stmt->execute([$patient_id]);
                 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                api_success(['items' => [$patient]]);
+                api_success(['patient' => $patient]);
                 
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
             }
-            break;
-            
-        case 'update':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][CREATE] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Erstellen des Patienten.');
+        }
+        break;
+        
+    case 'update':
+        try {
             // Get input data
             $input = $_POST;
             if (empty($input)) {
@@ -270,14 +344,14 @@ try {
             $id = intval($input['id'] ?? 0);
             
             if (!$id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             // Check if patient exists
             $stmt = $pdo->prepare("SELECT * FROM tp_patients WHERE id = ?");
             $stmt->execute([$id]);
             if (!$stmt->fetch()) {
-                api_error('Patient nicht gefunden', 404);
+                api_error('Patient nicht gefunden');
             }
             
             // Get update data
@@ -295,7 +369,7 @@ try {
             $medications = trim($input['medications'] ?? '');
             
             if (!$patient_name) {
-                api_error('Patientenname ist erforderlich', 400);
+                api_error('Patientenname ist erforderlich');
             }
             
             // Update patient
@@ -325,14 +399,19 @@ try {
             $stmt->execute([$id]);
             $patient = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            api_success(['items' => [$patient]]);
-            break;
-            
-        case 'get_notes':
+            api_success(['patient' => $patient]);
+        } catch (Exception $e) {
+            error_log('[PATIENTS][UPDATE] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Aktualisieren des Patienten.');
+        }
+        break;
+        
+    case 'get_notes':
+        try {
             $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
             
             if (!$patient_id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             $stmt = $pdo->prepare("
@@ -345,13 +424,18 @@ try {
             $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             api_success(['notes' => $notes]);
-            break;
-            
-        case 'get_records':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][GET_NOTES] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden der Notizen.');
+        }
+        break;
+        
+    case 'get_records':
+        try {
             $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
             
             if (!$patient_id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             $stmt = $pdo->prepare("
@@ -364,13 +448,18 @@ try {
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             api_success(['records' => $records]);
-            break;
-            
-        case 'get_documents':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][GET_RECORDS] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden der Krankenakte.');
+        }
+        break;
+        
+    case 'get_documents':
+        try {
             $patient_id = intval($_GET['patient_id'] ?? $_GET['id'] ?? 0);
             
             if (!$patient_id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             $stmt = $pdo->prepare("
@@ -383,15 +472,20 @@ try {
             $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             api_success(['documents' => $documents]);
-            break;
-            
-        case 'save_record':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][GET_DOCUMENTS] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden der Dokumente.');
+        }
+        break;
+        
+    case 'save_record':
+        try {
             $input = json_decode(file_get_contents("php://input"), true);
             $patient_id = intval($input['patient_id'] ?? 0);
             $content = trim($input['content'] ?? '');
             
             if (!$patient_id || !$content) {
-                api_error('Patient ID und Inhalt sind erforderlich', 400);
+                api_error('Patient ID und Inhalt sind erforderlich');
             }
             
             // Get user ID from session or use default
@@ -410,15 +504,20 @@ try {
             $record = $stmt->fetch(PDO::FETCH_ASSOC);
             
             api_success(['record' => $record]);
-            break;
-            
-        case 'save_note':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][SAVE_RECORD] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Speichern des Eintrags.');
+        }
+        break;
+        
+    case 'save_note':
+        try {
             $input = json_decode(file_get_contents("php://input"), true);
             $patient_id = intval($input['patient_id'] ?? 0);
             $content = trim($input['content'] ?? '');
             
             if (!$patient_id || !$content) {
-                api_error('Patient ID und Inhalt sind erforderlich', 400);
+                api_error('Patient ID und Inhalt sind erforderlich');
             }
             
             // Get user ID from session or use default
@@ -437,16 +536,21 @@ try {
             $note = $stmt->fetch(PDO::FETCH_ASSOC);
             
             api_success(['note' => $note]);
-            break;
-            
-        case 'upload_pdf':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][SAVE_NOTE] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Speichern der Notiz.');
+        }
+        break;
+        
+    case 'upload_pdf':
+        try {
             if (!isset($_FILES['file'])) {
-                api_error("Keine Datei empfangen", 400);
+                api_error("Keine Datei empfangen");
             }
             
             $patient_id = intval($_POST['patient_id'] ?? 0);
             if (!$patient_id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             $file = $_FILES['file'];
@@ -456,7 +560,7 @@ try {
             // Validate file type
             $allowed_extensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
             if (!in_array(strtolower($extension), $allowed_extensions)) {
-                api_error('Ungültiger Dateityp', 400);
+                api_error('Ungültiger Dateityp');
             }
             
             // Generate unique filename
@@ -493,15 +597,20 @@ try {
                 
                 api_success(['doc' => $doc]);
             } else {
-                api_error('Fehler beim Hochladen der Datei', 500);
+                api_error('Fehler beim Hochladen der Datei');
             }
-            break;
-            
-        case 'get_appointments':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][UPLOAD_PDF] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Datei-Upload.');
+        }
+        break;
+        
+    case 'get_appointments':
+        try {
             $id = intval($_GET['id'] ?? 0);
             
             if (!$id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             $stmt = $pdo->prepare("
@@ -519,9 +628,14 @@ try {
             $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             api_success(['appointments' => $appointments]);
-            break;
-            
-        case 'delete':
+        } catch (Exception $e) {
+            error_log('[PATIENTS][GET_APPOINTMENTS] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Laden der Termine.');
+        }
+        break;
+        
+    case 'delete':
+        try {
             // Get input data
             $input = $_POST;
             if (empty($input)) {
@@ -532,7 +646,7 @@ try {
             $id = intval($input['id'] ?? $_GET['id'] ?? 0);
             
             if (!$id) {
-                api_error('Patient ID fehlt', 400);
+                api_error('Patient ID fehlt');
             }
             
             // Begin transaction
@@ -546,7 +660,7 @@ try {
                 
                 if ($result['count'] > 0) {
                     $pdo->rollBack();
-                    api_error("Patient kann nicht gelöscht werden - hat noch " . $result['count'] . " Rechnung(en)", 400);
+                    api_error("Patient kann nicht gelöscht werden - hat noch " . $result['count'] . " Rechnung(en)");
                 }
                 
                 // Delete patient (cascades to appointments, treatments, notes)
@@ -555,25 +669,21 @@ try {
                 
                 $pdo->commit();
                 
-                api_success(['items' => []]);
+                api_success(['message' => 'Patient erfolgreich gelöscht']);
                 
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
             }
-            break;
-            
-        default:
-            api_error('Unbekannte Aktion: '.$action);
-            break;
-    }
-    
-} catch (PDOException $e) {
-    error_log("Patients API PDO Error (" . $action . "): " . $e->getMessage());
-    api_error('Datenbankfehler aufgetreten');
-} catch (Throwable $e) {
-    error_log("Patients API Error (" . $action . "): " . $e->getMessage());
-    api_error('Serverfehler aufgetreten');
+        } catch (Exception $e) {
+            error_log('[PATIENTS][DELETE] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
+            api_error('Fehler beim Löschen des Patienten.');
+        }
+        break;
+
+    default:
+        api_error('Unbekannte Aktion: ' . $action);
+        break;
 }
 
 // Should never reach here

@@ -1,1 +1,1 @@
-[PatientsAPI][list] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'field list'
+[PatientsAPI][list] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'field list'[PATIENTS][GET] SQLSTATE[HY000]: General error: 1 no such function: DATE_FORMAT
