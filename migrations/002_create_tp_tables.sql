@@ -1,7 +1,7 @@
 -- Tierphysio Manager 2.0 - Create tp_ prefixed tables
 -- This script creates the tp_ prefixed tables with proper structure
 
-USE tierphysio_db;
+USE tierphysio;
 
 -- Create tp_owners table if not exists
 CREATE TABLE IF NOT EXISTS tp_owners (
