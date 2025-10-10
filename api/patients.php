@@ -674,44 +674,42 @@ switch ($action) {
         
     case 'upload_image':
         try {
-            if (empty($_FILES['image']) || empty($_POST['id'])) {
+            if (!isset($_FILES['image']) || !isset($_POST['id'])) {
                 api_error('Kein Bild oder keine ID übergeben.');
             }
 
             $id = intval($_POST['id']);
-            $file = $_FILES['image'];
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if ($id <= 0) api_error('Ungültige Patienten-ID.');
 
-            // Nur erlaubte Formate
+            $file = $_FILES['image'];
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                api_error('Uploadfehler: '.$file['error']);
+            }
+
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             $allowed = ['jpg','jpeg','png','gif','webp'];
             if (!in_array($ext, $allowed)) {
                 api_error('Ungültiges Dateiformat.');
             }
 
-            // Upload-Verzeichnis erstellen falls nicht vorhanden
-            $uploadDir = __DIR__ . '/../uploads/patients';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0775, true);
-            }
+            $dir = __DIR__.'/../uploads/patients/'.$id.'/';
+            if (!is_dir($dir)) mkdir($dir, 0775, true);
 
-            // Sicherer Dateiname
-            $filename = 'patient_'.$id.'_'.time().'.'.$ext;
-            $target = $uploadDir . '/' . $filename;
+            $filename = 'profile_'.time().'.'.$ext;
+            $target = $dir.$filename;
 
             if (!move_uploaded_file($file['tmp_name'], $target)) {
-                api_error('Upload fehlgeschlagen.');
+                api_error('Fehler beim Verschieben der Datei.');
             }
 
-            // Pfad relativ speichern
-            $relativePath = 'uploads/patients/'.$filename;
+            $relative = 'uploads/patients/'.$id.'/'.$filename;
+
             $stmt = $pdo->prepare("UPDATE tp_patients SET image=? WHERE id=?");
-            $stmt->execute([$relativePath, $id]);
+            $stmt->execute([$relative, $id]);
 
-            api_success(['message' => 'Bild erfolgreich hochgeladen.', 'path' => $relativePath]);
-
+            api_success(['message'=>'Bild erfolgreich gespeichert.','path'=>$relative,'id'=>$id]);
         } catch (Exception $e) {
-            error_log('[PATIENTS][UPLOAD] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
-            api_error('Fehler beim Hochladen des Bildes.');
+            api_error('Fehler: '.$e->getMessage());
         }
         break;
         

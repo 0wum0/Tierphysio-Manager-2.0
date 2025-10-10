@@ -263,6 +263,7 @@
                                          class="w-20 h-20 rounded-lg border border-gray-600 object-cover" 
                                          alt="Patientenbild">
                                     <input type="file" 
+                                           name="image"
                                            x-ref="fileInput" 
                                            @change="uploadImage($event)" 
                                            accept="image/*"
@@ -928,11 +929,22 @@ function patientsManager() {
 
         async uploadImage(e) {
             const file = e.target.files[0];
-            if (!file || !this.currentPatient?.id) return;
+            if (!file) {
+                this.showNotification('⚠️ Bitte zuerst ein Bild auswählen.', 'error');
+                return;
+            }
+
+            // ID prüfen - wichtig: currentPatient für modales Fenster nutzen
+            const patientId = this.currentPatient?.id;
+            if (!patientId) {
+                this.showNotification('❌ Keine Patienten-ID gefunden.', 'error');
+                return;
+            }
 
             const formData = new FormData();
+            formData.append('action', 'upload_image');
             formData.append('image', file);
-            formData.append('id', this.currentPatient.id);
+            formData.append('id', patientId);
 
             try {
                 const res = await fetch('/api/patients.php?action=upload_image', {
@@ -942,17 +954,14 @@ function patientsManager() {
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.currentPatient.image = '/' + data.path;
-                    this.showNotification('✅ Bild erfolgreich hochgeladen', 'success');
-                    // Update patient in list
-                    const patientIndex = this.patients.findIndex(p => p.id === this.currentPatient.id);
-                    if (patientIndex !== -1) {
-                        this.patients[patientIndex].image = this.currentPatient.image;
-                    }
+                    const idx = this.patients.findIndex(p => p.id === this.currentPatient.id);
+                    if (idx !== -1) this.patients[idx].image = '/' + data.path;
+                    this.showNotification('✅ ' + data.message, 'success');
                 } else {
                     this.showNotification('❌ ' + data.message, 'error');
                 }
             } catch (err) {
-                this.showNotification('Upload-Fehler: ' + err.message, 'error');
+                this.showNotification('Fehler: ' + err.message, 'error');
             }
         },
 
