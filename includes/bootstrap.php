@@ -33,10 +33,11 @@ require_once __DIR__ . '/auth.php';
 // Template-System
 require_once __DIR__ . '/template.php';
 
-// Session starten wenn noch nicht gestartet
+// KRITISCH: Session MUSS VOR jeder Weiterleitungslogik gestartet werden
 if (session_status() === PHP_SESSION_NONE) {
     session_name(defined('SESSION_NAME') ? SESSION_NAME : 'tierphysio_session');
     session_start();
+    error_log("[AUTH DEBUG] Session started in bootstrap.php");
 }
 
 // CSRF-Token generieren falls nicht vorhanden
@@ -167,18 +168,56 @@ if (!function_exists('flash')) {
     }
 }
 
-// Login Check für Admin-Bereich
-$current_file = basename($_SERVER['PHP_SELF'] ?? '');
-$is_admin_area = strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false;
-$is_login_page = $current_file === 'login.php';
-$is_api = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
+// Globale Whitelist für öffentliche Seiten (keine Authentifizierung erforderlich)
+$publicPages = [
+    'login.php',
+    'logout.php',
+    'install.php',
+    'forgot_password.php',
+    'index.php',  // public/index.php
+    'setup_db.php',
+    'run_migration.php'
+];
 
-// Prüfe Authentifizierung für Admin-Bereich (außer Login-Seite und API)
-if ($is_admin_area && !$is_login_page && !$is_api) {
-    if (!is_logged_in()) {
-        // Speichere die ursprüngliche URL für Redirect nach Login
-        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
-        redirect('/admin/login.php');
+$currentFile = basename($_SERVER['PHP_SELF'] ?? '');
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$isAdminArea = strpos($requestUri, '/admin/') !== false;
+$isPublicArea = strpos($requestUri, '/public/') !== false;
+$isApiArea = strpos($requestUri, '/api/') !== false;
+
+// Debug-Logging für Authentifizierung
+error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | isAdmin: " . ($isAdminArea ? 'yes' : 'no'));
+
+// Weiterleitungslogik - NUR wenn NICHT in der Whitelist
+if (!in_array($currentFile, $publicPages)) {
+    // Admin-Bereich Prüfung
+    if ($isAdminArea && !$isApiArea) {
+        // Prüfe ob User eingeloggt ist
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            error_log("[AUTH DEBUG] Redirect to login: No user_id in session for admin area");
+            // Speichere die ursprüngliche URL für Redirect nach Login
+            $_SESSION['redirect_after_login'] = $requestUri;
+            header('Location: /admin/login.php');
+            exit;
+        }
+    }
+    
+    // Public-Bereich (außer öffentliche Seiten) könnte auch Authentifizierung erfordern
+    // Dies hängt von den spezifischen Anforderungen ab
+}
+
+// Wenn eingeloggt und auf login.php, weiterleiten zum Dashboard
+if (in_array($currentFile, ['login.php']) && isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    error_log("[AUTH DEBUG] User already logged in, redirecting from login.php to admin dashboard");
+    // Für Admin-Login-Seite
+    if ($isAdminArea) {
+        header('Location: /admin/dashboard.php');
+        exit;
+    }
+    // Für Public-Login-Seite
+    if ($isPublicArea) {
+        header('Location: /public/dashboard.php');
+        exit;
     }
 }
 

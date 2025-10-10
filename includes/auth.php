@@ -20,7 +20,9 @@ function require_login() {
         session_start();
     }
     
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user'])) {
+    // Konsistent mit is_logged_in() - nur user_id prüfen
+    if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+        error_log("[AUTH DEBUG] require_login() - No user_id, redirecting to login");
         header('Location: /public/login.php');
         exit;
     }
@@ -43,17 +45,38 @@ function require_admin() {
  * Get current logged in user
  */
 function current_user() {
-    if (isset($_SESSION['user'])) {
-        return $_SESSION['user'];
+    // Prüfe user_id zuerst
+    if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+        // Versuche User-Daten aus der Session zu holen
+        if (isset($_SESSION['user'])) {
+            return $_SESSION['user'];
+        }
+        // Falls keine User-Daten in Session, lade sie aus der Datenbank
+        global $pdo;
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("SELECT id, username, email, first_name, last_name, role, avatar FROM tp_users WHERE id = ? AND is_active = 1");
+                $stmt->execute([$_SESSION['user_id']]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($user) {
+                    $_SESSION['user'] = $user;
+                    return $user;
+                }
+            } catch (PDOException $e) {
+                error_log("[AUTH DEBUG] current_user() error: " . $e->getMessage());
+            }
+        }
     }
     return null;
 }
 
 /**
  * Check if user is logged in
+ * Synchronisiert mit StandaloneAuth - prüft nur user_id
  */
 function is_logged_in() {
-    return isset($_SESSION['user_id']) && isset($_SESSION['user']);
+    // Konsistent mit StandaloneAuth::isLoggedIn()
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
 /**
@@ -65,23 +88,31 @@ function is_admin() {
 
 /**
  * Login user
+ * Synchronisiert mit StandaloneAuth::login()
  */
 function login_user($user_data) {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
     
+    // Setze die gleichen Session-Variablen wie StandaloneAuth
     $_SESSION['user_id'] = $user_data['id'];
+    $_SESSION['user_role'] = $user_data['role'] ?? 'guest';
+    $_SESSION['login_time'] = time();
+    
+    // Speichere auch erweiterte User-Daten für Kompatibilität
     $_SESSION['user'] = [
         'id' => $user_data['id'],
-        'username' => $user_data['username'],
-        'email' => $user_data['email'],
-        'first_name' => $user_data['first_name'],
-        'last_name' => $user_data['last_name'],
-        'role' => $user_data['role'],
+        'username' => $user_data['username'] ?? '',
+        'email' => $user_data['email'] ?? '',
+        'first_name' => $user_data['first_name'] ?? '',
+        'last_name' => $user_data['last_name'] ?? '',
+        'role' => $user_data['role'] ?? 'guest',
         'avatar' => $user_data['avatar'] ?? null
     ];
     $_SESSION['logged_in'] = true;
+    
+    error_log("[AUTH DEBUG] login_user() - User " . $user_data['id'] . " logged in with role " . $user_data['role']);
     
     // Regenerate session ID for security
     session_regenerate_id(true);

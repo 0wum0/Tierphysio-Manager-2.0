@@ -55,9 +55,21 @@ class Auth {
     
     /**
      * Check if user is logged in
+     * Konsistent mit auth.php is_logged_in()
      */
     public function isLoggedIn() {
-        return $this->user !== null;
+        // Prüfe sowohl das interne User-Objekt als auch die Session
+        if ($this->user !== null) {
+            return true;
+        }
+        // Falls kein User geladen, aber Session vorhanden
+        if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+            // Versuche User zu laden
+            if ($this->loadUser($_SESSION['user_id'])) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
@@ -93,8 +105,18 @@ class Auth {
      */
     public function requireLogin($redirect = true) {
         if (!$this->isLoggedIn()) {
+            error_log("[AUTH DEBUG] StandaloneAuth::requireLogin() - User not logged in");
             if ($redirect) {
-                header('Location: /public/login.php');
+                // Speichere die ursprüngliche URL für Redirect nach Login
+                $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? '/';
+                
+                // Prüfe ob wir im Admin-Bereich sind
+                $isAdminArea = strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false;
+                if ($isAdminArea) {
+                    header('Location: /admin/login.php');
+                } else {
+                    header('Location: /public/login.php');
+                }
                 exit;
             } else {
                 http_response_code(401);
@@ -146,10 +168,24 @@ class Auth {
                 ];
             }
             
-            // Set session
+            // Set session - konsistent mit auth.php login_user()
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_role'] = $user['role'];
             $_SESSION['login_time'] = time();
+            
+            // Speichere erweiterte User-Daten
+            $_SESSION['user'] = [
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'first_name' => $user['first_name'] ?? '',
+                'last_name' => $user['last_name'] ?? '',
+                'role' => $user['role'],
+                'avatar' => $user['avatar'] ?? null
+            ];
+            $_SESSION['logged_in'] = true;
+            
+            error_log("[AUTH DEBUG] StandaloneAuth::login() - User " . $user['id'] . " logged in");
             
             // Update last login
             $stmt = $this->pdo->prepare("UPDATE tp_users SET last_login = NOW() WHERE id = ?");
