@@ -4,46 +4,59 @@
  * Patients API Endpoint - Unified JSON Response Format
  */
 
-require_once __DIR__ . '/_bootstrap.php';
-
-// Ensure JSON header is always sent
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-// Get action from request
-$action = $_GET['action'] ?? 'list';
+$action = $_GET['action'] ?? '';
+
+// Get database connection
+$pdo = get_pdo();
 
 try {
-    // Get database connection
-    $pdo = get_pdo();
     
     switch ($action) {
         case 'list':
+        case 'search':
             try {
-                $stmt = $pdo->query("
+                $keyword = '';
+                $sql = "
                     SELECT 
-                        p.id,
-                        p.name,
-                        p.species,
-                        p.image,
-                        p.is_active,
+                        p.id, p.name, p.species, p.image, p.is_active,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_full_name,
-                        (SELECT MIN(a.appointment_date) 
-                           FROM tp_appointments a 
-                           WHERE a.patient_id = p.id 
-                             AND a.status IN ('scheduled','confirmed')) AS next_appointment,
-                        (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END 
-                           FROM tp_invoices i 
-                           WHERE i.patient_id = p.id 
-                             AND i.status != 'paid') AS invoice_status
+                        (SELECT MIN(a.appointment_date)
+                           FROM tp_appointments a
+                           WHERE a.patient_id = p.id
+                           AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                        (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END
+                           FROM tp_invoices i
+                           WHERE i.patient_id = p.id
+                           AND i.status != 'paid') AS invoice_status
                     FROM tp_patients p
                     LEFT JOIN tp_owners o ON o.id = p.owner_id
-                    ORDER BY p.created_at DESC
-                ");
+                ";
+
+                // Falls eine Suchanfrage vorliegt
+                if ($action === 'search' && !empty($_GET['q'])) {
+                    $keyword = trim($_GET['q']);
+                    $sql .= " WHERE p.name LIKE :kw OR o.first_name LIKE :kw OR o.last_name LIKE :kw ";
+                }
+
+                $sql .= " ORDER BY p.created_at DESC";
+                $stmt = $pdo->prepare($sql);
+
+                if ($keyword) $stmt->bindValue(':kw', "%{$keyword}%");
+                $stmt->execute();
+
                 $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                api_success(['patients' => $patients, 'count' => count($patients)]);
+                api_success([
+                    'patients' => $patients ?: [],
+                    'count' => count($patients)
+                ]);
+
             } catch (Exception $e) {
-                error_log('[PatientsAPI][list] '.$e->getMessage()."\n", 3, __DIR__.'/../logs/api.log');
-                api_error("Fehler beim Laden der Patienten: ".$e->getMessage());
+                error_log('[PatientsAPI]['.$action.'] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
+                api_error('Fehler beim Laden der Patienten: '.$e->getMessage());
             }
             break;
             
@@ -551,7 +564,7 @@ try {
             break;
             
         default:
-            api_error("Unbekannte Aktion: " . $action);
+            api_error('Unbekannte Aktion: '.$action);
             break;
     }
     
