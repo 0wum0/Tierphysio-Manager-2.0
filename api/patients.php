@@ -15,127 +15,33 @@ try {
     
     switch ($action) {
         case 'list':
-            // Optional search and status parameters - support both 'q' and 'search'
-            $search = trim($_GET['q'] ?? $_GET['search'] ?? '');
-            $status = trim($_GET['status'] ?? '');
-            $species = trim($_GET['species'] ?? '');
-            
-            // Base query with owner join, next appointment and invoice status
-            $query = "
-                SELECT 
-                    p.id,
-                    p.owner_id,
-                    p.patient_number,
-                    p.name,
-                    p.species,
-                    p.breed,
-                    p.birth_date,
-                    p.gender,
-                    p.weight,
-                    p.color,
-                    p.microchip,
-                    p.is_active,
-                    o.first_name AS owner_first_name,
-                    o.last_name AS owner_last_name,
-                    CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
-                    o.email AS owner_email,
-                    (SELECT DATE_FORMAT(MIN(a.appointment_date), '%d.%m.%Y') 
-                     FROM tp_appointments a 
-                     WHERE a.patient_id = p.id 
-                     AND a.appointment_date >= CURDATE() 
-                     AND a.status IN ('scheduled','confirmed')) AS next_appointment,
-                    (SELECT CASE 
-                        WHEN COUNT(*) > 0 THEN 'open' 
-                        ELSE 'paid' 
-                     END 
-                     FROM tp_invoices i 
-                     WHERE i.patient_id = p.id 
-                     AND i.status != 'paid') AS invoice_status
-                FROM tp_patients p
-                JOIN tp_owners o ON o.id = p.owner_id
-                WHERE 1=1
-            ";
-            
-            $params = [];
-            
-            // Apply search filter
-            if ($search) {
-                $query .= " AND (p.name LIKE :search OR p.patient_number LIKE :search OR o.last_name LIKE :search)";
-                $params['search'] = '%' . $search . '%';
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        p.id,
+                        p.name,
+                        p.species,
+                        p.image,
+                        p.is_active,
+                        CONCAT(o.first_name, ' ', o.last_name) AS owner_full_name,
+                        (SELECT MIN(a.appointment_date) 
+                           FROM tp_appointments a 
+                           WHERE a.patient_id = p.id 
+                             AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                        (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END 
+                           FROM tp_invoices i 
+                           WHERE i.patient_id = p.id 
+                             AND i.status != 'paid') AS invoice_status
+                    FROM tp_patients p
+                    LEFT JOIN tp_owners o ON o.id = p.owner_id
+                    ORDER BY p.created_at DESC
+                ");
+                $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                api_success(['patients' => $patients, 'count' => count($patients)]);
+            } catch (Exception $e) {
+                error_log('[PatientsAPI][list] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
+                api_error("Fehler beim Laden der Patienten: ".$e->getMessage());
             }
-            
-            // Apply status filter
-            if ($status !== '') {
-                if ($status === 'active') {
-                    $query .= " AND p.is_active = 1";
-                } elseif ($status === 'inactive') {
-                    $query .= " AND p.is_active = 0";
-                }
-            }
-            
-            // Apply species filter
-            if ($species) {
-                $query .= " AND p.species = :species";
-                $params['species'] = $species;
-            }
-            
-            $query .= " ORDER BY p.created_at DESC";
-            
-            // Apply pagination if provided
-            $limit = intval($_GET['limit'] ?? 0);
-            $offset = intval($_GET['offset'] ?? 0);
-            
-            if ($limit > 0) {
-                $query .= " LIMIT :limit OFFSET :offset";
-            }
-            
-            $stmt = $pdo->prepare($query);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
-            }
-            if ($limit > 0) {
-                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            }
-            
-            $stmt->execute();
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Get total count
-            $countQuery = "
-                SELECT COUNT(*) as total
-                FROM tp_patients p
-                JOIN tp_owners o ON o.id = p.owner_id
-                WHERE 1=1
-            ";
-            
-            if ($search) {
-                $countQuery .= " AND (p.name LIKE :search OR p.patient_number LIKE :search OR o.last_name LIKE :search)";
-            }
-            
-            if ($status === 'active') {
-                $countQuery .= " AND p.is_active = 1";
-            } elseif ($status === 'inactive') {
-                $countQuery .= " AND p.is_active = 0";
-            }
-            
-            if ($species) {
-                $countQuery .= " AND p.species = :species";
-            }
-            
-            $countStmt = $pdo->prepare($countQuery);
-            foreach ($params as $key => $value) {
-                $countStmt->bindValue(':' . $key, $value);
-            }
-            $countStmt->execute();
-            $total = $countStmt->fetchColumn();
-            
-            // Format data
-            foreach ($rows as &$row) {
-                $row['is_active'] = (bool) $row['is_active'];
-            }
-            
-            api_success(['items' => $rows, 'count' => $total]);
             break;
             
         case 'get':
