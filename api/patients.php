@@ -15,9 +15,10 @@ try {
     
     switch ($action) {
         case 'list':
-            // Optional search and status parameters
-            $search = trim($_GET['search'] ?? '');
+            // Optional search and status parameters - support both 'q' and 'search'
+            $search = trim($_GET['q'] ?? $_GET['search'] ?? '');
             $status = trim($_GET['status'] ?? '');
+            $species = trim($_GET['species'] ?? '');
             
             // Base query with owner join
             $query = "
@@ -29,9 +30,14 @@ try {
                     p.species,
                     p.breed,
                     p.birth_date,
+                    p.gender,
+                    p.weight,
+                    p.color,
+                    p.microchip,
                     p.is_active,
                     o.first_name AS owner_first_name,
                     o.last_name AS owner_last_name,
+                    CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
                     o.email AS owner_email
                 FROM tp_patients p
                 JOIN tp_owners o ON o.id = p.owner_id
@@ -53,6 +59,12 @@ try {
                 } elseif ($status === 'inactive') {
                     $query .= " AND p.is_active = 0";
                 }
+            }
+            
+            // Apply species filter
+            if ($species) {
+                $query .= " AND p.species = :species";
+                $params['species'] = $species;
             }
             
             $query .= " ORDER BY p.created_at DESC";
@@ -93,6 +105,10 @@ try {
                 $countQuery .= " AND p.is_active = 1";
             } elseif ($status === 'inactive') {
                 $countQuery .= " AND p.is_active = 0";
+            }
+            
+            if ($species) {
+                $countQuery .= " AND p.species = :species";
             }
             
             $countStmt = $pdo->prepare($countQuery);
@@ -153,7 +169,11 @@ try {
             $stmt->execute([$id]);
             $patient['recent_treatments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            api_success(['items' => [$patient]]);
+            // Format boolean value
+            $patient['is_active'] = (bool) ($patient['is_active'] ?? true);
+            
+            // Format the response with patient object directly for backward compatibility
+            api_success(['patient' => $patient, 'items' => [$patient]]);
             break;
             
         case 'create':

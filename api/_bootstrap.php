@@ -37,14 +37,24 @@ function api_success(array $payload = []): void {
         $items = [$items];
     }
     
-    echo json_encode([
+    // Build response
+    $response = [
         'ok' => true,
         'status' => 'success',
         'data' => [
             'items' => $items,
             'count' => $count
         ]
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    ];
+    
+    // Add any additional fields directly to response for backward compatibility
+    foreach ($payload as $key => $value) {
+        if (!in_array($key, ['items', 'data', 'count'])) {
+            $response[$key] = $value;
+        }
+    }
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
