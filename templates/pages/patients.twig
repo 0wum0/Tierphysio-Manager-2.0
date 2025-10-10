@@ -75,7 +75,12 @@
                  :data-id="patient.id"
                  @click="openPatient(patient.id)">
                 <!-- Patient Image -->
-                <img :src="patient.image || '/public/img/patient_placeholder.svg'" 
+                <img x-show="patient.image" 
+                     :src="patient.image.startsWith('/') ? patient.image : '/' + patient.image" 
+                     :alt="patient.name" 
+                     class="rounded-t-xl w-full h-40 object-cover">
+                <img x-show="!patient.image"
+                     src="/public/img/patient_placeholder.svg" 
                      :alt="patient.name" 
                      class="rounded-t-xl w-full h-40 object-cover">
                 
@@ -247,6 +252,22 @@
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farbe</label>
                                 <input type="text" x-model="currentPatient.color"
                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                            </div>
+
+                            <!-- Profile Image Upload -->
+                            <div class="md:col-span-2" x-show="currentPatient.id">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profilbild</label>
+                                <div class="flex items-center space-x-4">
+                                    <img x-show="currentPatient.image" 
+                                         :src="currentPatient.image.startsWith('/') ? currentPatient.image : '/' + currentPatient.image" 
+                                         class="w-20 h-20 rounded-lg border border-gray-600 object-cover" 
+                                         alt="Patientenbild">
+                                    <input type="file" 
+                                           x-ref="fileInput" 
+                                           @change="uploadImage($event)" 
+                                           accept="image/*"
+                                           class="text-sm text-gray-700 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                                </div>
                             </div>
 
                             <!-- Notes -->
@@ -654,7 +675,8 @@ function patientsManager() {
                 microchip: '',
                 color: '',
                 owner_id: '',
-                notes: ''
+                notes: '',
+                image: ''
             };
             this.currentOwner = {
                 salutation: 'Herr',
@@ -686,7 +708,8 @@ function patientsManager() {
                 microchip: patient.microchip || '',
                 color: patient.color || '',
                 owner_id: patient.owner_id,
-                notes: patient.notes || ''
+                notes: patient.notes || '',
+                image: patient.image || ''
             };
             this.showModal = true;
         },
@@ -901,6 +924,36 @@ function patientsManager() {
             }
             
             return age + (age === 1 ? ' Jahr' : ' Jahre');
+        },
+
+        async uploadImage(e) {
+            const file = e.target.files[0];
+            if (!file || !this.currentPatient?.id) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('id', this.currentPatient.id);
+
+            try {
+                const res = await fetch('/api/patients.php?action=upload_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.currentPatient.image = '/' + data.path;
+                    this.showNotification('✅ Bild erfolgreich hochgeladen', 'success');
+                    // Update patient in list
+                    const patientIndex = this.patients.findIndex(p => p.id === this.currentPatient.id);
+                    if (patientIndex !== -1) {
+                        this.patients[patientIndex].image = this.currentPatient.image;
+                    }
+                } else {
+                    this.showNotification('❌ ' + data.message, 'error');
+                }
+            } catch (err) {
+                this.showNotification('Upload-Fehler: ' + err.message, 'error');
+            }
         },
 
         showNotification(message, type) {
