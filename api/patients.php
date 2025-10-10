@@ -49,11 +49,6 @@ try {
 switch ($action) {
     case 'list':
         try {
-            // Use different syntax for SQLite vs MySQL
-            $concat_expr = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
-                ? "COALESCE(o.first_name || ' ' || o.last_name, '')"
-                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
-            
             $sql = "
                 SELECT 
                     p.id,
@@ -61,34 +56,45 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    {$concat_expr} AS owner_full_name,
+                    COALESCE(CONCAT(o.first_name, ' ', o.last_name), '') AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
-                         AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                       AND a.status IN ('scheduled','confirmed')) AS next_appointment,
                     (SELECT CASE WHEN COUNT(*)>0 THEN 'open' ELSE 'paid' END
                        FROM tp_invoices i
                        WHERE i.patient_id = p.id
-                         AND i.status != 'paid') AS invoice_status
+                       AND i.status != 'paid') AS invoice_status
                 FROM tp_patients p
                 LEFT JOIN tp_owners o ON o.id = p.owner_id
                 ORDER BY p.created_at DESC
             ";
+            
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Konvertiere Owner-Feld immer zu Text
+            // Ensure proper string formatting
             foreach ($patients as &$p) {
-                if (!isset($p['owner_full_name']) || is_numeric($p['owner_full_name'])) {
+                if (is_numeric($p['owner_full_name'])) {
                     $p['owner_full_name'] = '';
                 }
             }
             
-            api_success(['patients' => $patients, 'count' => count($patients)]);
+            // Format JSON exactly like frontend expects
+            echo json_encode([
+                "status" => "success",
+                "data" => [
+                    "items" => $patients
+                ],
+                "count" => count($patients)
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+            
         } catch (Exception $e) {
             error_log('[PATIENTS][LIST] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
-            api_error('Fehler beim Laden der Patientenliste: ' . $e->getMessage());
+            echo json_encode(["status" => "error", "message" => "Fehler beim Laden der Patientenliste"], JSON_UNESCAPED_UNICODE);
+            exit;
         }
         break;
         
@@ -96,11 +102,6 @@ switch ($action) {
         try {
             $keyword = trim($_GET['q'] ?? '');
             
-            // Use different syntax for SQLite vs MySQL
-            $concat_expr = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
-                ? "COALESCE(o.first_name || ' ' || o.last_name, '')"
-                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
-            
             $sql = "
                 SELECT 
                     p.id,
@@ -108,7 +109,7 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    {$concat_expr} AS owner_full_name,
+                    COALESCE(CONCAT(o.first_name, ' ', o.last_name), '') AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
@@ -135,17 +136,27 @@ switch ($action) {
             
             $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Konvertiere Owner-Feld immer zu Text
+            // Ensure proper string formatting
             foreach ($patients as &$p) {
-                if (!isset($p['owner_full_name']) || is_numeric($p['owner_full_name'])) {
+                if (is_numeric($p['owner_full_name'])) {
                     $p['owner_full_name'] = '';
                 }
             }
             
-            api_success(['patients' => $patients, 'count' => count($patients)]);
+            // Format JSON exactly like frontend expects
+            echo json_encode([
+                "status" => "success",
+                "data" => [
+                    "items" => $patients
+                ],
+                "count" => count($patients)
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+            
         } catch (Exception $e) {
             error_log('[PATIENTS][SEARCH] ' . $e->getMessage(), 3, __DIR__ . '/../logs/api.log');
-            api_error('Fehler bei der Suche: ' . $e->getMessage());
+            echo json_encode(["status" => "error", "message" => "Fehler bei der Suche"], JSON_UNESCAPED_UNICODE);
+            exit;
         }
         break;
 
