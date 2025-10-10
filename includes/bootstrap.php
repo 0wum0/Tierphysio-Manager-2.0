@@ -40,6 +40,9 @@ if (session_status() === PHP_SESSION_NONE) {
     error_log("[AUTH DEBUG] Session started in bootstrap.php");
 }
 
+// Auth-Instanz erstellen
+$auth = new Auth();
+
 // CSRF-Token generieren falls nicht vorhanden
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -174,48 +177,42 @@ $publicPages = [
     'logout.php',
     'install.php',
     'forgot_password.php',
-    'index.php',  // public/index.php
     'setup_db.php',
     'run_migration.php'
 ];
 
 $currentFile = basename($_SERVER['PHP_SELF'] ?? '');
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-$isAdminArea = strpos($requestUri, '/admin/') !== false;
+$isAdminPage = str_contains($requestUri, '/admin/');
 $isPublicArea = strpos($requestUri, '/public/') !== false;
 $isApiArea = strpos($requestUri, '/api/') !== false;
 
 // Debug-Logging für Authentifizierung
-error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | isAdmin: " . ($isAdminArea ? 'yes' : 'no'));
+error_log("[AUTH DEBUG] Page: $currentFile | URI: $requestUri | UserID: " . ($_SESSION['user_id'] ?? 'none') . " | isAdmin: " . ($isAdminPage ? 'yes' : 'no'));
 
-// Weiterleitungslogik - NUR wenn NICHT in der Whitelist
+// Redirect logic
 if (!in_array($currentFile, $publicPages)) {
-    // Admin-Bereich Prüfung
-    if ($isAdminArea && !$isApiArea) {
-        // Prüfe ob User eingeloggt ist
-        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-            error_log("[AUTH DEBUG] Redirect to login: No user_id in session for admin area");
-            // Speichere die ursprüngliche URL für Redirect nach Login
-            $_SESSION['redirect_after_login'] = $requestUri;
-            header('Location: /admin/login.php');
-            exit;
-        }
-    }
-    
-    // Public-Bereich (außer öffentliche Seiten) könnte auch Authentifizierung erfordern
-    // Dies hängt von den spezifischen Anforderungen ab
-}
-
-// Wenn eingeloggt und auf login.php, weiterleiten zum Dashboard
-if (in_array($currentFile, ['login.php']) && isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
-    error_log("[AUTH DEBUG] User already logged in, redirecting from login.php to admin dashboard");
-    // Für Admin-Login-Seite
-    if ($isAdminArea) {
-        header('Location: /admin/dashboard.php');
+    if (!$auth->isLoggedIn()) {
+        error_log("[AUTH DEBUG] User not logged in, redirecting to login");
+        header('Location: /login.php');
         exit;
     }
-    // Für Public-Login-Seite
-    if ($isPublicArea) {
+
+    // Restrict admin area to admin users only
+    if ($isAdminPage && !$auth->isAdmin()) {
+        error_log("[AUTH DEBUG] Non-admin user trying to access admin area, redirecting to dashboard");
+        header('Location: /public/dashboard.php');
+        exit;
+    }
+}
+
+// Prevent login redirect loop
+if ($currentFile === 'login.php' && $auth->isLoggedIn()) {
+    error_log("[AUTH DEBUG] User already logged in, redirecting from login.php");
+    if ($auth->isAdmin()) {
+        header('Location: /admin/index.php');
+        exit;
+    } else {
         header('Location: /public/dashboard.php');
         exit;
     }
