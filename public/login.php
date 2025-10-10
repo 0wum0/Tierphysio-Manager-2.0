@@ -9,9 +9,14 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 // Auth instance is already created in bootstrap.php
 // $auth is available
 
-// Redirect if already logged in
+// Redirect if already logged in - handled by bootstrap.php now
+// This code is kept as fallback only
 if ($auth->isLoggedIn()) {
-    header('Location: index.php');
+    if ($auth->isAdmin()) {
+        header('Location: /admin/index.php');
+    } else {
+        header('Location: /public/dashboard.php');
+    }
     exit;
 }
 
@@ -28,7 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $auth->login($username, $password, $remember);
         
         if ($result['success']) {
-            header('Location: index.php');
+            // Redirect based on user role
+            if ($auth->isAdmin()) {
+                header('Location: /admin/index.php');
+            } else {
+                header('Location: /public/dashboard.php');
+            }
             exit;
         } else {
             flash('error', $result['message']);
