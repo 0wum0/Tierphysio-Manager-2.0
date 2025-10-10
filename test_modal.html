@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Modal Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-gray-800 dark:text-white">Patient Modal Test</h1>
+        
+        <!-- Test Patients Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <!-- Patient Card 1 -->
+            <div class="patient-card bg-white dark:bg-gray-900 rounded-xl p-4 shadow-md hover:shadow-lg cursor-pointer transition"
+                 onclick="openTestPatient(1)">
+                <h3 class="text-xl font-semibold text-purple-600">Bella</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Hund</p>
+                <p class="text-xs text-gray-400 mt-1">Besitzer: Max Mustermann</p>
+            </div>
+            
+            <!-- Patient Card 2 -->
+            <div class="patient-card bg-white dark:bg-gray-900 rounded-xl p-4 shadow-md hover:shadow-lg cursor-pointer transition"
+                 onclick="openTestPatient(2)">
+                <h3 class="text-xl font-semibold text-purple-600">Felix</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Katze</p>
+                <p class="text-xs text-gray-400 mt-1">Besitzer: Anna Schmidt</p>
+            </div>
+            
+            <!-- Patient Card 3 -->
+            <div class="patient-card bg-white dark:bg-gray-900 rounded-xl p-4 shadow-md hover:shadow-lg cursor-pointer transition"
+                 onclick="openTestPatient(3)">
+                <h3 class="text-xl font-semibold text-purple-600">Thunder</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Pferd</p>
+                <p class="text-xs text-gray-400 mt-1">Besitzer: Julia Weber</p>
+            </div>
+        </div>
+        
+        <!-- Patient Detail Modal -->
+        <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" x-cloak>
+            <div id="patientModalBox"
+                 class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-4xl relative"
+                 x-transition.scale.origin.center>
+                <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-purple-400 text-2xl">&times;</button>
+                
+                <template x-if="patient">
+                    <div class="space-y-3 text-gray-800 dark:text-gray-200">
+                        <h2 class="text-2xl font-semibold" x-text="patient.name"></h2>
+                        <p><strong>Tierart:</strong> <span x-text="patient.species"></span></p>
+                        <p><strong>Besitzer:</strong> <span x-text="patient.owner_full_name"></span></p>
+                        <p><strong>Geburtsdatum:</strong> <span x-text="patient.birth_date"></span></p>
+                        <p><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></p>
+
+                        <div class="mt-4 border-t border-gray-300 dark:border-gray-700 pt-4">
+                            <h3 class="font-medium text-purple-500 mb-2">Notizen</h3>
+                            <template x-if="notes.length > 0">
+                                <ul class="list-disc ml-6">
+                                    <template x-for="note in notes" :key="note.id">
+                                        <li x-text="note.title + ' – ' + note.created_at"></li>
+                                    </template>
+                                </ul>
+                            </template>
+                            <template x-if="notes.length === 0">
+                                <p class="text-sm text-gray-500">Keine Notizen vorhanden.</p>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Test data
+        const testPatients = {
+            1: {
+                id: 1,
+                name: 'Bella',
+                species: 'Hund',
+                owner_full_name: 'Max Mustermann',
+                birth_date: '2020-03-15',
+                is_active: true
+            },
+            2: {
+                id: 2,
+                name: 'Felix',
+                species: 'Katze', 
+                owner_full_name: 'Anna Schmidt',
+                birth_date: '2018-07-22',
+                is_active: true
+            },
+            3: {
+                id: 3,
+                name: 'Thunder',
+                species: 'Pferd',
+                owner_full_name: 'Julia Weber',
+                birth_date: '2015-05-10',
+                is_active: true
+            }
+        };
+        
+        const testNotes = {
+            1: [
+                {id: 1, title: 'Erste Untersuchung', created_at: '2024-01-15'},
+                {id: 2, title: 'Impfung', created_at: '2024-02-20'}
+            ],
+            2: [
+                {id: 3, title: 'Kastration', created_at: '2023-12-10'}
+            ],
+            3: []
+        };
+        
+        function openTestPatient(id) {
+            window.dispatchEvent(new CustomEvent('open-patient-modal', { detail: { id: id } }));
+        }
+        
+        function patientModal() {
+            return {
+                open: false,
+                patient: null,
+                notes: [],
+                
+                init() {
+                    // Listen for open event
+                    window.addEventListener('open-patient-modal', async (e) => {
+                        await this.openPatient(e.detail.id);
+                    });
+                },
+                
+                async openPatient(id) {
+                    this.open = true;
+                    
+                    // Animate modal opening with anime.js
+                    this.$nextTick(() => {
+                        if (typeof anime !== 'undefined') {
+                            anime({
+                                targets: '#patientModalBox',
+                                opacity: [0, 1],
+                                scale: [0.9, 1],
+                                duration: 300,
+                                easing: 'easeOutExpo'
+                            });
+                        }
+                    });
+                    
+                    // Simulate API call with test data
+                    this.patient = testPatients[id];
+                    this.notes = testNotes[id] || [];
+                    
+                    console.log('Opened patient modal for:', this.patient);
+                }
+            };
+        }
+    </script>
+</body>
+</html>

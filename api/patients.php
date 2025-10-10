@@ -382,6 +382,25 @@ try {
             api_success(['items' => [$patient]]);
             break;
             
+        case 'get_notes':
+            $id = intval($_GET['id'] ?? 0);
+            
+            if (!$id) {
+                api_error('Patient ID fehlt', 400);
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT id, title, content, created_at 
+                FROM tp_notes 
+                WHERE patient_id = ? 
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$id]);
+            $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            api_success(['notes' => $notes]);
+            break;
+            
         case 'delete':
             // Get input data
             $input = $_POST;
