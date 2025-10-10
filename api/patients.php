@@ -672,6 +672,49 @@ switch ($action) {
         }
         break;
         
+    case 'upload_image':
+        try {
+            if (empty($_FILES['image']) || empty($_POST['id'])) {
+                api_error('Kein Bild oder keine ID übergeben.');
+            }
+
+            $id = intval($_POST['id']);
+            $file = $_FILES['image'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+            // Nur erlaubte Formate
+            $allowed = ['jpg','jpeg','png','gif','webp'];
+            if (!in_array($ext, $allowed)) {
+                api_error('Ungültiges Dateiformat.');
+            }
+
+            // Upload-Verzeichnis erstellen falls nicht vorhanden
+            $uploadDir = __DIR__ . '/../uploads/patients';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0775, true);
+            }
+
+            // Sicherer Dateiname
+            $filename = 'patient_'.$id.'_'.time().'.'.$ext;
+            $target = $uploadDir . '/' . $filename;
+
+            if (!move_uploaded_file($file['tmp_name'], $target)) {
+                api_error('Upload fehlgeschlagen.');
+            }
+
+            // Pfad relativ speichern
+            $relativePath = 'uploads/patients/'.$filename;
+            $stmt = $pdo->prepare("UPDATE tp_patients SET image=? WHERE id=?");
+            $stmt->execute([$relativePath, $id]);
+
+            api_success(['message' => 'Bild erfolgreich hochgeladen.', 'path' => $relativePath]);
+
+        } catch (Exception $e) {
+            error_log('[PATIENTS][UPLOAD] '.$e->getMessage(), 3, __DIR__.'/../logs/api.log');
+            api_error('Fehler beim Hochladen des Bildes.');
+        }
+        break;
+        
     case 'delete':
         try {
             // Get input data
