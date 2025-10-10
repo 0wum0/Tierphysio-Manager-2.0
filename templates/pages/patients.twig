@@ -71,12 +71,35 @@
     <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Patient Cards -->
         <template x-for="patient in patients" :key="patient.id">
-            <div class="patient-card bg-white dark:bg-gray-900 rounded-xl p-4 shadow-md hover:shadow-lg cursor-pointer transition"
+            <div class="patient-card bg-white dark:bg-gray-900 rounded-xl shadow-md hover:shadow-lg cursor-pointer hover:scale-[1.01] transition-all transform"
                  :data-id="patient.id"
                  @click="openPatient(patient.id)">
-                <h3 class="text-xl font-semibold text-lilac-600" x-text="patient.name"></h3>
-                <p class="text-sm text-gray-600 dark:text-gray-300" x-text="getSpeciesName(patient.species)"></p>
-                <p class="text-xs text-gray-400 mt-1">Besitzer: <span x-text="patient.owner_full_name || '—'"></span></p>
+                <!-- Patient Image -->
+                <img :src="patient.image || '/public/img/patient_placeholder.svg'" 
+                     :alt="patient.name" 
+                     class="rounded-t-xl w-full h-40 object-cover">
+                
+                <!-- Card Content -->
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-purple-600 dark:text-purple-400" x-text="patient.name"></h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        <span x-text="getSpeciesIcon(patient.species)"></span>
+                        <span x-text="getSpeciesName(patient.species)"></span>
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Besitzer: <span x-text="patient.owner_full_name || '—'"></span></p>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between mt-3 gap-2">
+                        <button @click.stop="editPatient(patient)" 
+                                class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                            Bearbeiten
+                        </button>
+                        <button @click.stop="deletePatient(patient)" 
+                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                            Löschen
+                        </button>
+                    </div>
+                </div>
             </div>
         </template>
 
@@ -350,91 +373,101 @@
     <!-- Patient Detail Modal -->
     <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" x-cloak>
         <div id="patientModalBox"
-             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative"
+             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative"
              x-transition.scale.origin.center>
-            <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-lilac-400 text-2xl">&times;</button>
+            <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-purple-400 text-2xl">&times;</button>
             
             <template x-if="patient">
-                <div class="space-y-3 text-gray-800 dark:text-gray-200">
-                    <h2 class="text-2xl font-semibold" x-text="patient.name"></h2>
-                    <p><strong>Tierart:</strong> <span x-text="getSpeciesName(patient.species)"></span></p>
-                    <p><strong>Besitzer:</strong> <span x-text="patient.owner_full_name"></span></p>
-                    <p><strong>Geburtsdatum:</strong> <span x-text="formatDate(patient.birth_date)"></span></p>
-                    <p><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></p>
+                <div>
+                    <h2 class="text-2xl font-semibold text-purple-600 dark:text-purple-400" x-text="patient.name"></h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Besitzer: <span x-text="patient.owner_full_name"></span></p>
 
                     <!-- TABS NAVIGATION -->
-                    <div class="mt-6">
-                        <div class="flex border-b border-lilac/30 text-sm font-medium">
-                            <button class="px-4 py-2" :class="tab==='overview' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='overview'">Übersicht</button>
-                            <button class="px-4 py-2" :class="tab==='befunde' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='befunde'">Befunde</button>
-                            <button class="px-4 py-2" :class="tab==='notizen' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='notizen'">Notizen</button>
-                            <button class="px-4 py-2" :class="tab==='dokumente' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='dokumente'">Dokumente</button>
+                    <div class="flex border-b border-gray-600 dark:border-gray-700 mt-4">
+                        <button :class="tab==='info' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
+                                class="px-4 py-2 transition-colors" 
+                                @click="tab='info'">Info</button>
+                        <button :class="tab==='befunde' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
+                                class="px-4 py-2 transition-colors" 
+                                @click="tab='befunde'">Befunde</button>
+                        <button :class="tab==='notizen' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
+                                class="px-4 py-2 transition-colors" 
+                                @click="tab='notizen'">Notizen</button>
+                        <button :class="tab==='dokumente' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
+                                class="px-4 py-2 transition-colors" 
+                                @click="tab='dokumente'">Dokumente</button>
+                    </div>
+
+                    <!-- TAB CONTENT -->
+                    <div class="mt-4">
+                        <!-- INFO TAB -->
+                        <div x-show="tab==='info'" x-transition>
+                            <ul class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
+                                <li><strong>Tierart:</strong> <span x-text="getSpeciesName(patient.species)"></span></li>
+                                <li><strong>Rasse:</strong> <span x-text="patient.breed || '—'"></span></li>
+                                <li><strong>Geburtsdatum:</strong> <span x-text="formatDate(patient.birth_date)"></span></li>
+                                <li><strong>Geschlecht:</strong> <span x-text="getGenderName(patient.gender)"></span></li>
+                                <li><strong>Gewicht:</strong> <span x-text="patient.weight ? patient.weight + ' kg' : '—'"></span></li>
+                                <li><strong>Farbe:</strong> <span x-text="patient.color || '—'"></span></li>
+                                <li><strong>Chip-Nr:</strong> <span x-text="patient.microchip || '—'"></span></li>
+                                <li><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></li>
+                            </ul>
                         </div>
 
-                        <!-- TAB INHALTE -->
-                        <div class="mt-4">
+                        <!-- BEFUNDE TAB -->
+                        <div x-show="tab==='befunde'" x-transition>
+                            <textarea x-model="newRecord" 
+                                      placeholder="Neuer Befund..." 
+                                      class="w-full p-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600"></textarea>
+                            <button @click="saveRecord()" 
+                                    class="mt-2 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+                                Speichern
+                            </button>
 
-                            <!-- ÜBERSICHT -->
-                            <div x-show="tab==='overview'" x-transition>
-                                <p class="text-sm text-gray-500">Allgemeine Informationen</p>
-                                <ul class="mt-2 space-y-1 text-sm">
-                                    <li><strong>Tierart:</strong> <span x-text="getSpeciesName(patient.species)"></span></li>
-                                    <li><strong>Besitzer:</strong> <span x-text="patient.owner_full_name"></span></li>
-                                    <li><strong>Rasse:</strong> <span x-text="patient.breed || '—'"></span></li>
-                                    <li><strong>Farbe:</strong> <span x-text="patient.color || '—'"></span></li>
-                                    <li><strong>Geschlecht:</strong> <span x-text="getGenderName(patient.gender)"></span></li>
-                                    <li><strong>Gewicht:</strong> <span x-text="patient.weight ? patient.weight + ' kg' : '—'"></span></li>
-                                    <li><strong>Chip-Nr:</strong> <span x-text="patient.microchip || '—'"></span></li>
-                                    <li><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></li>
-                                </ul>
-                            </div>
+                            <ul class="mt-3 space-y-2">
+                                <template x-for="record in records" :key="record.id">
+                                    <li class="bg-gray-800 p-3 rounded">
+                                        <p class="text-sm" x-text="record.content"></p>
+                                        <p class="text-xs text-gray-400 mt-1" x-text="formatDate(record.created_at)"></p>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
 
-                            <!-- BEFUNDE -->
-                            <div x-show="tab==='befunde'" x-transition>
-                                <h3 class="text-lilac-500 font-semibold mb-2">Befunde</h3>
-                                <textarea x-model="newRecord" placeholder="Neuen Befund hinzufügen..." class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></textarea>
-                                <button @click="saveRecord()" class="mt-2 px-4 py-2 bg-lilac-500 text-white rounded-md hover:bg-lilac-600">Speichern</button>
+                        <!-- NOTIZEN TAB -->
+                        <div x-show="tab==='notizen'" x-transition>
+                            <textarea x-model="newNote" 
+                                      placeholder="Neue Notiz..." 
+                                      class="w-full p-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600"></textarea>
+                            <button @click="saveNote()" 
+                                    class="mt-2 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+                                Speichern
+                            </button>
 
-                                <ul class="mt-4 space-y-2">
-                                    <template x-for="record in records" :key="record.id">
-                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
-                                            <p class="text-sm" x-text="record.content"></p>
-                                            <p class="text-xs text-gray-400 mt-1" x-text="formatDate(record.created_at)"></p>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
+                            <ul class="mt-3 space-y-2">
+                                <template x-for="note in notes" :key="note.id">
+                                    <li class="bg-gray-800 p-3 rounded">
+                                        <p class="text-sm" x-text="note.content"></p>
+                                        <p class="text-xs text-gray-400 mt-1" x-text="formatDate(note.created_at)"></p>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
 
-                            <!-- NOTIZEN -->
-                            <div x-show="tab==='notizen'" x-transition>
-                                <h3 class="text-lilac-500 font-semibold mb-2">Notizen</h3>
-                                <textarea x-model="newNote" placeholder="Neue Notiz..." class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></textarea>
-                                <button @click="saveNote()" class="mt-2 px-4 py-2 bg-lilac-500 text-white rounded-md hover:bg-lilac-600">Speichern</button>
-
-                                <ul class="mt-4 space-y-2">
-                                    <template x-for="note in notes" :key="note.id">
-                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
-                                            <p class="text-sm" x-text="note.content"></p>
-                                            <p class="text-xs text-gray-400 mt-1" x-text="formatDate(note.created_at)"></p>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-
-                            <!-- DOKUMENTE -->
-                            <div x-show="tab==='dokumente'" x-transition>
-                                <h3 class="text-lilac-500 font-semibold mb-2">Dokumente</h3>
-                                <input type="file" @change="uploadDocument($event)" class="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-lilac-50 file:text-lilac-700 hover:file:bg-lilac-100" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                                <ul class="mt-4 space-y-2">
-                                    <template x-for="doc in documents" :key="doc.id">
-                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md flex justify-between items-center">
-                                            <span x-text="doc.title"></span>
-                                            <a :href="doc.file_path" target="_blank" class="text-lilac-500 hover:text-lilac-600 text-sm">Ansehen</a>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-
+                        <!-- DOKUMENTE TAB -->
+                        <div x-show="tab==='dokumente'" x-transition>
+                            <input type="file" 
+                                   @change="uploadDocument($event)" 
+                                   class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" 
+                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <ul class="mt-3 space-y-2">
+                                <template x-for="doc in documents" :key="doc.id">
+                                    <li class="flex justify-between bg-gray-800 p-3 rounded">
+                                        <span x-text="doc.title"></span>
+                                        <a :href="doc.file_path" target="_blank" class="text-purple-500 hover:text-purple-600">Ansehen</a>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -883,7 +916,7 @@ function patientModal() {
         open: false,
         patient: null,
         notes: [],
-        tab: 'overview',
+        tab: 'info',
         records: [],
         documents: [],
         newRecord: '',
@@ -898,7 +931,7 @@ function patientModal() {
         
         async openPatient(id) {
             this.open = true;
-            this.tab = 'overview'; // Reset to overview tab
+            this.tab = 'info'; // Reset to info tab
             this.newRecord = '';
             this.newNote = '';
             
