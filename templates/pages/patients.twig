@@ -350,7 +350,7 @@
     <!-- Patient Detail Modal -->
     <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" x-cloak>
         <div id="patientModalBox"
-             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-4xl relative"
+             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative"
              x-transition.scale.origin.center>
             <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-lilac-400 text-2xl">&times;</button>
             
@@ -362,18 +362,80 @@
                     <p><strong>Geburtsdatum:</strong> <span x-text="formatDate(patient.birth_date)"></span></p>
                     <p><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></p>
 
-                    <div class="mt-4 border-t border-gray-700 pt-4">
-                        <h3 class="font-medium text-lilac-500 mb-2">Notizen</h3>
-                        <template x-if="notes.length > 0">
-                            <ul class="list-disc ml-6">
-                                <template x-for="note in notes" :key="note.id">
-                                    <li x-text="note.title + ' – ' + note.created_at"></li>
-                                </template>
-                            </ul>
-                        </template>
-                        <template x-if="notes.length === 0">
-                            <p class="text-sm text-gray-500">Keine Notizen vorhanden.</p>
-                        </template>
+                    <!-- TABS NAVIGATION -->
+                    <div class="mt-6">
+                        <div class="flex border-b border-lilac/30 text-sm font-medium">
+                            <button class="px-4 py-2" :class="tab==='overview' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='overview'">Übersicht</button>
+                            <button class="px-4 py-2" :class="tab==='befunde' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='befunde'">Befunde</button>
+                            <button class="px-4 py-2" :class="tab==='notizen' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='notizen'">Notizen</button>
+                            <button class="px-4 py-2" :class="tab==='dokumente' ? 'border-b-2 border-lilac-500 text-lilac-500' : 'text-gray-400'" @click="tab='dokumente'">Dokumente</button>
+                        </div>
+
+                        <!-- TAB INHALTE -->
+                        <div class="mt-4">
+
+                            <!-- ÜBERSICHT -->
+                            <div x-show="tab==='overview'" x-transition>
+                                <p class="text-sm text-gray-500">Allgemeine Informationen</p>
+                                <ul class="mt-2 space-y-1 text-sm">
+                                    <li><strong>Tierart:</strong> <span x-text="getSpeciesName(patient.species)"></span></li>
+                                    <li><strong>Besitzer:</strong> <span x-text="patient.owner_full_name"></span></li>
+                                    <li><strong>Rasse:</strong> <span x-text="patient.breed || '—'"></span></li>
+                                    <li><strong>Farbe:</strong> <span x-text="patient.color || '—'"></span></li>
+                                    <li><strong>Geschlecht:</strong> <span x-text="getGenderName(patient.gender)"></span></li>
+                                    <li><strong>Gewicht:</strong> <span x-text="patient.weight ? patient.weight + ' kg' : '—'"></span></li>
+                                    <li><strong>Chip-Nr:</strong> <span x-text="patient.microchip || '—'"></span></li>
+                                    <li><strong>Status:</strong> <span x-text="patient.is_active ? 'Aktiv' : 'Inaktiv'"></span></li>
+                                </ul>
+                            </div>
+
+                            <!-- BEFUNDE -->
+                            <div x-show="tab==='befunde'" x-transition>
+                                <h3 class="text-lilac-500 font-semibold mb-2">Befunde</h3>
+                                <textarea x-model="newRecord" placeholder="Neuen Befund hinzufügen..." class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></textarea>
+                                <button @click="saveRecord()" class="mt-2 px-4 py-2 bg-lilac-500 text-white rounded-md hover:bg-lilac-600">Speichern</button>
+
+                                <ul class="mt-4 space-y-2">
+                                    <template x-for="record in records" :key="record.id">
+                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+                                            <p class="text-sm" x-text="record.content"></p>
+                                            <p class="text-xs text-gray-400 mt-1" x-text="formatDate(record.created_at)"></p>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+
+                            <!-- NOTIZEN -->
+                            <div x-show="tab==='notizen'" x-transition>
+                                <h3 class="text-lilac-500 font-semibold mb-2">Notizen</h3>
+                                <textarea x-model="newNote" placeholder="Neue Notiz..." class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></textarea>
+                                <button @click="saveNote()" class="mt-2 px-4 py-2 bg-lilac-500 text-white rounded-md hover:bg-lilac-600">Speichern</button>
+
+                                <ul class="mt-4 space-y-2">
+                                    <template x-for="note in notes" :key="note.id">
+                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+                                            <p class="text-sm" x-text="note.content"></p>
+                                            <p class="text-xs text-gray-400 mt-1" x-text="formatDate(note.created_at)"></p>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+
+                            <!-- DOKUMENTE -->
+                            <div x-show="tab==='dokumente'" x-transition>
+                                <h3 class="text-lilac-500 font-semibold mb-2">Dokumente</h3>
+                                <input type="file" @change="uploadDocument($event)" class="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-lilac-50 file:text-lilac-700 hover:file:bg-lilac-100" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <ul class="mt-4 space-y-2">
+                                    <template x-for="doc in documents" :key="doc.id">
+                                        <li class="p-2 bg-gray-100 dark:bg-gray-800 rounded-md flex justify-between items-center">
+                                            <span x-text="doc.title"></span>
+                                            <a :href="doc.file_path" target="_blank" class="text-lilac-500 hover:text-lilac-600 text-sm">Ansehen</a>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </template>
@@ -821,6 +883,11 @@ function patientModal() {
         open: false,
         patient: null,
         notes: [],
+        tab: 'overview',
+        records: [],
+        documents: [],
+        newRecord: '',
+        newNote: '',
         
         init() {
             // Listen for open event
@@ -831,6 +898,9 @@ function patientModal() {
         
         async openPatient(id) {
             this.open = true;
+            this.tab = 'overview'; // Reset to overview tab
+            this.newRecord = '';
+            this.newNote = '';
             
             // Animate modal opening with anime.js
             this.$nextTick(() => {
@@ -851,7 +921,12 @@ function patientModal() {
                 
                 if (data.status === "success" || data.ok === true) {
                     this.patient = data.patient || data.data?.items?.[0] || data.data?.[0] || null;
-                    await this.loadNotes(id);
+                    // Load all data for tabs
+                    await Promise.all([
+                        this.loadRecords(id),
+                        this.loadNotes(id),
+                        this.loadDocuments(id)
+                    ]);
                 } else {
                     this.showNotification("Fehler: " + (data.message || data.error || 'Unbekannter Fehler'), 'error');
                 }
@@ -861,13 +936,100 @@ function patientModal() {
             }
         },
         
+        async loadRecords(id) {
+            try {
+                const res = await fetch(`/api/patients.php?action=get_records&patient_id=${id}`);
+                const data = await res.json();
+                this.records = (data.status === "success" || data.ok === true) ? (data.records || data.data || []) : [];
+            } catch {
+                this.records = [];
+            }
+        },
+        
         async loadNotes(id) {
             try {
-                const res = await fetch(`/api/patients.php?action=get_notes&id=${id}`);
+                const res = await fetch(`/api/patients.php?action=get_notes&patient_id=${id}`);
                 const data = await res.json();
                 this.notes = (data.status === "success" || data.ok === true) ? (data.notes || data.data || []) : [];
             } catch {
                 this.notes = [];
+            }
+        },
+        
+        async loadDocuments(id) {
+            try {
+                const res = await fetch(`/api/patients.php?action=get_documents&patient_id=${id}`);
+                const data = await res.json();
+                this.documents = (data.status === "success" || data.ok === true) ? (data.documents || data.data || []) : [];
+            } catch {
+                this.documents = [];
+            }
+        },
+        
+        async saveRecord() {
+            if (!this.newRecord.trim()) return;
+            try {
+                const res = await fetch('/api/patients.php?action=save_record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: this.patient.id, content: this.newRecord })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.records.unshift(data.record);
+                    this.newRecord = '';
+                    this.showNotification('Befund gespeichert', 'success');
+                }
+            } catch (err) {
+                console.error('Fehler beim Speichern:', err);
+                this.showNotification('Fehler beim Speichern des Befunds', 'error');
+            }
+        },
+
+        async saveNote() {
+            if (!this.newNote.trim()) return;
+            try {
+                const res = await fetch('/api/patients.php?action=save_note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: this.patient.id, content: this.newNote })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.notes.unshift(data.note);
+                    this.newNote = '';
+                    this.showNotification('Notiz gespeichert', 'success');
+                }
+            } catch (err) {
+                console.error('Fehler beim Speichern:', err);
+                this.showNotification('Fehler beim Speichern der Notiz', 'error');
+            }
+        },
+
+        async uploadDocument(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const form = new FormData();
+            form.append('file', file);
+            form.append('patient_id', this.patient.id);
+            
+            try {
+                const res = await fetch('/api/patients.php?action=upload_pdf', { 
+                    method: 'POST', 
+                    body: form 
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.documents.unshift(data.doc);
+                    e.target.value = ''; // Reset file input
+                    this.showNotification('Dokument hochgeladen', 'success');
+                } else {
+                    this.showNotification(data.error || 'Fehler beim Upload', 'error');
+                }
+            } catch (err) {
+                console.error('Upload-Fehler:', err);
+                this.showNotification('Fehler beim Hochladen des Dokuments', 'error');
             }
         },
         
@@ -896,6 +1058,17 @@ function patientModal() {
                 'other': 'Andere'
             };
             return names[species] || 'Unbekannt';
+        },
+        
+        getGenderName(gender) {
+            const names = {
+                'male': 'Männlich',
+                'female': 'Weiblich',
+                'neutered_male': 'Kastriert (männlich)',
+                'spayed_female': 'Kastriert (weiblich)',
+                'unknown': 'Unbekannt'
+            };
+            return names[gender] || 'Unbekannt';
         },
         
         showNotification(message, type = 'success') {
