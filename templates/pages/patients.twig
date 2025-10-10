@@ -428,7 +428,7 @@
                                 @click="tab='notizen'">Notizen</button>
                         <button :class="tab==='dokumente' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
                                 class="px-4 py-2 transition-colors" 
-                                @click="tab='dokumente'">Dokumente</button>
+                                @click="tab='dokumente'; loadDocuments()">📄 Dokumente</button>
                     </div>
 
                     <!-- TAB CONTENT -->
@@ -506,19 +506,22 @@
                         </div>
 
                         <!-- DOKUMENTE TAB -->
-                        <div x-show="tab==='dokumente'" x-transition>
-                            <input type="file" 
-                                   @change="uploadDocument($event)" 
-                                   class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" 
-                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                            <ul class="mt-3 space-y-2">
-                                <template x-for="doc in documents" :key="doc.id">
-                                    <li class="flex justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                                        <span x-text="doc.title"></span>
-                                        <a :href="doc.file_path" target="_blank" class="text-purple-500 hover:text-purple-600">Ansehen</a>
-                                    </li>
-                                </template>
-                            </ul>
+                        <div x-show="tab==='dokumente'" x-transition class="space-y-3 p-2">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-gray-200 font-semibold">Dokumente</h3>
+                                <input type="file" @change="uploadDocument($event)" class="text-sm text-gray-300" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
+                            </div>
+
+                            <template x-if="documents.length === 0">
+                                <p class="text-gray-400 text-sm">Noch keine Dokumente vorhanden.</p>
+                            </template>
+
+                            <template x-for="doc in documents" :key="doc.id">
+                                <div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700">
+                                    <a :href="'/' + doc.file_path" target="_blank" class="text-indigo-400 hover:underline" x-text="doc.title || doc.file_name"></a>
+                                    <button @click="deleteDocument(doc.id)" class="text-red-400 hover:text-red-600 text-xs">🗑️ Löschen</button>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -1050,7 +1053,7 @@ function patientModal() {
                     await Promise.all([
                         this.loadRecords(id),
                         this.loadNotes(id),
-                        this.loadDocuments(id),
+                        this.loadDocuments(),
                         this.loadAppointments(id)
                     ]);
                 } else {
@@ -1082,11 +1085,14 @@ function patientModal() {
             }
         },
         
-        async loadDocuments(id) {
+        async loadDocuments() {
+            if (!this.patient?.id) return;
             try {
-                const res = await fetch(`/api/patients.php?action=get_documents&patient_id=${id}`);
+                const res = await fetch('/api/patients.php?action=list_documents&id=' + this.patient.id);
                 const data = await res.json();
-                this.documents = (data.status === "success" || data.ok === true) ? (data.documents || data.data || []) : [];
+                if (data.status === 'success') {
+                    this.documents = data.documents || [];
+                }
             } catch {
                 this.documents = [];
             }
@@ -1144,28 +1150,45 @@ function patientModal() {
 
         async uploadDocument(e) {
             const file = e.target.files[0];
-            if (!file) return;
+            if (!file || !this.patient?.id) return;
             
-            const form = new FormData();
-            form.append('file', file);
-            form.append('patient_id', this.patient.id);
-            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('id', this.patient.id);
+
             try {
-                const res = await fetch('/api/patients.php?action=upload_pdf', { 
-                    method: 'POST', 
-                    body: form 
+                const res = await fetch('/api/patients.php?action=upload_document', {
+                    method: 'POST',
+                    body: formData
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    this.documents.unshift(data.doc);
+                    this.documents.unshift(data.document);
                     e.target.value = ''; // Reset file input
-                    this.showNotification('Dokument hochgeladen', 'success');
+                    this.showNotification('✅ ' + data.message, 'success');
                 } else {
-                    this.showNotification(data.error || 'Fehler beim Upload', 'error');
+                    this.showNotification('❌ ' + data.message, 'error');
                 }
             } catch (err) {
                 console.error('Upload-Fehler:', err);
                 this.showNotification('Fehler beim Hochladen des Dokuments', 'error');
+            }
+        },
+
+        async deleteDocument(id) {
+            if (!confirm('Dokument wirklich löschen?')) return;
+            try {
+                const res = await fetch('/api/patients.php?action=delete_document&id=' + id);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.documents = this.documents.filter(d => d.id !== id);
+                    this.showNotification('✅ Dokument gelöscht', 'success');
+                } else {
+                    this.showNotification('❌ ' + data.message, 'error');
+                }
+            } catch (err) {
+                console.error('Löschfehler:', err);
+                this.showNotification('Fehler beim Löschen', 'error');
             }
         },
         
