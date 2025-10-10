@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Patients API JSON Structure</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Testing Patients API JSON Structure</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPI() {
+            const results = document.getElementById('results');
+            
+            try {
+                results.innerHTML = '<p class="info">Testing /api/patients.php?action=list...</p>';
+                
+                const response = await fetch('/api/patients.php?action=list');
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    
+                    results.innerHTML += '<p class="success">✅ Valid JSON response</p>';
+                    
+                    // Check structure
+                    let structureCheck = '<h3>Structure Check:</h3><ul>';
+                    
+                    // Check status
+                    if (data.status === 'success') {
+                        structureCheck += '<li class="success">✅ status = "success"</li>';
+                    } else {
+                        structureCheck += '<li class="error">❌ status = "' + data.status + '" (expected "success")</li>';
+                    }
+                    
+                    // Check data.items
+                    if (data.data && data.data.items && Array.isArray(data.data.items)) {
+                        structureCheck += '<li class="success">✅ data.items exists and is array</li>';
+                        structureCheck += '<li class="info">Items count: ' + data.data.items.length + '</li>';
+                        
+                        if (data.data.items.length > 0) {
+                            const first = data.data.items[0];
+                            structureCheck += '<li class="info">First item fields:</li><ul>';
+                            
+                            for (const key in first) {
+                                const value = first[key];
+                                const type = typeof value;
+                                
+                                if (key === 'owner_full_name') {
+                                    if (type === 'string') {
+                                        structureCheck += '<li class="success">✅ ' + key + ': "' + value + '" (string)</li>';
+                                    } else {
+                                        structureCheck += '<li class="error">❌ ' + key + ': "' + value + '" (' + type + ' - should be string!)</li>';
+                                    }
+                                } else {
+                                    structureCheck += '<li>' + key + ': ' + (value === null ? 'null' : '"' + value + '"') + ' (' + type + ')</li>';
+                                }
+                            }
+                            structureCheck += '</ul>';
+                        }
+                    } else {
+                        structureCheck += '<li class="error">❌ data.items missing or not array</li>';
+                    }
+                    
+                    // Check count
+                    if (typeof data.count === 'number') {
+                        structureCheck += '<li class="success">✅ count = ' + data.count + '</li>';
+                    } else {
+                        structureCheck += '<li class="error">❌ count missing or not a number</li>';
+                    }
+                    
+                    structureCheck += '</ul>';
+                    results.innerHTML += structureCheck;
+                    
+                    // Show full JSON
+                    results.innerHTML += '<h3>Full JSON Response:</h3>';
+                    results.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    
+                    // Test if it matches frontend expectations
+                    results.innerHTML += '<h3>Frontend Compatibility Test:</h3>';
+                    
+                    // This mimics what patients.twig expects
+                    if (data && (data.ok === true || data.status === 'success')) {
+                        const items = data.data?.items ?? data.data?.data ?? data.data ?? [];
+                        if (Array.isArray(items) && items.length > 0) {
+                            results.innerHTML += '<p class="success">✅ Compatible with frontend (data.data.items found)</p>';
+                        } else {
+                            results.innerHTML += '<p class="error">❌ Not compatible with frontend (data.data.items not found or empty)</p>';
+                        }
+                    } else {
+                        results.innerHTML += '<p class="error">❌ Response status not recognized by frontend</p>';
+                    }
+                    
+                } catch (parseError) {
+                    results.innerHTML += '<p class="error">❌ JSON parse error: ' + parseError.message + '</p>';
+                    results.innerHTML += '<h3>Raw Response:</h3>';
+                    results.innerHTML += '<pre>' + text.substring(0, 1000) + (text.length > 1000 ? '...' : '') + '</pre>';
+                }
+                
+            } catch (error) {
+                results.innerHTML += '<p class="error">❌ Fetch error: ' + error.message + '</p>';
+            }
+        }
+        
+        // Run test on load
+        testAPI();
+    </script>
+</body>
+</html>
