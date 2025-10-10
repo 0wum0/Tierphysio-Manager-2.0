@@ -76,36 +76,6 @@ function createDatabase() {
         $sql = file_get_contents(__DIR__ . '/../migrations/001_initial_schema.sql');
         $pdo->exec($sql);
         
-        // Execute additional migrations
-        $migrations = [
-            '/../migrations/002_create_tp_tables.sql',
-            '/../migrations/003_default_settings.sql',
-            '/../migrations/2025_10_09_admin_panel.sql'
-        ];
-        
-        foreach ($migrations as $migrationFile) {
-            $migrationPath = __DIR__ . $migrationFile;
-            if (file_exists($migrationPath)) {
-                $sql = file_get_contents($migrationPath);
-                // Split by semicolon but ignore those in strings
-                $queries = preg_split('/;(?=(?:[^\'"]|\'[^\']*\'|"[^"]*")*$)/', $sql);
-                
-                foreach ($queries as $query) {
-                    $query = trim($query);
-                    if (!empty($query)) {
-                        try {
-                            $pdo->exec($query);
-                        } catch (PDOException $e) {
-                            // Ignore duplicate key errors for INSERT IGNORE statements
-                            if (strpos($e->getMessage(), 'Duplicate') === false) {
-                                throw $e;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
         return ['success' => true];
     } catch (PDOException $e) {
         return ['success' => false, 'message' => 'Datenbank-Setup fehlgeschlagen: ' . $e->getMessage()];
@@ -119,20 +89,14 @@ function createAdminAccount() {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         
         // Create admin user
-        $stmt = $pdo->prepare("INSERT INTO tp_users (username, email, password, first_name, last_name, role, name) VALUES (?, ?, ?, ?, ?, 'admin', ?)");
+        $stmt = $pdo->prepare("INSERT INTO tp_users (username, email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, 'admin')");
         $stmt->execute([
             $_POST['admin_username'],
             $_POST['admin_email'],
             password_hash($_POST['admin_password'], PASSWORD_BCRYPT),
             $_POST['admin_firstname'],
-            $_POST['admin_lastname'],
-            $_POST['admin_firstname'] . ' ' . $_POST['admin_lastname']
+            $_POST['admin_lastname']
         ]);
-        $adminUserId = $pdo->lastInsertId();
-        
-        // Assign admin role to the created user
-        $stmt = $pdo->prepare("INSERT INTO tp_user_roles (user_id, role_id) SELECT ?, id FROM tp_roles WHERE name = 'admin'");
-        $stmt->execute([$adminUserId]);
         
         // Create config file
         $config = "<?php\n";
@@ -592,27 +556,15 @@ function checkRequirements() {
                             Tierphysio Manager 2.0 wurde erfolgreich installiert.<br>
                             Sie können sich nun mit Ihrem Administrator-Account anmelden.
                         </p>
-                        <div class="flex justify-center space-x-4">
-                            <a href="../public/index.php" class="inline-flex items-center px-8 py-3 border border-transparent 
-                                      text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 
-                                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
-                                      transition-colors duration-200">
-                                Zur Anwendung
-                                <svg class="ml-2 -mr-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </a>
-                            <a href="../admin/login.php" class="inline-flex items-center px-8 py-3 border border-purple-600 
-                                      text-base font-medium rounded-lg text-purple-600 bg-white hover:bg-purple-50 
-                                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
-                                      transition-colors duration-200">
-                                Zum Admin-Panel
-                                <svg class="ml-2 -mr-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                            </a>
-                        </div>
+                        <a href="../public/index.php" class="inline-flex items-center px-8 py-3 border border-transparent 
+                                  text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 
+                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
+                                  transition-colors duration-200">
+                            Zur Anwendung
+                            <svg class="ml-2 -mr-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
                     </div>
                 <?php endif; ?>
             </div>
