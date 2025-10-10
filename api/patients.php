@@ -20,7 +20,7 @@ try {
             $status = trim($_GET['status'] ?? '');
             $species = trim($_GET['species'] ?? '');
             
-            // Base query with owner join
+            // Base query with owner join, next appointment and invoice status
             $query = "
                 SELECT 
                     p.id,
@@ -38,7 +38,19 @@ try {
                     o.first_name AS owner_first_name,
                     o.last_name AS owner_last_name,
                     CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
-                    o.email AS owner_email
+                    o.email AS owner_email,
+                    (SELECT DATE_FORMAT(MIN(a.appointment_date), '%d.%m.%Y') 
+                     FROM tp_appointments a 
+                     WHERE a.patient_id = p.id 
+                     AND a.appointment_date >= CURDATE() 
+                     AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                    (SELECT CASE 
+                        WHEN COUNT(*) > 0 THEN 'open' 
+                        ELSE 'paid' 
+                     END 
+                     FROM tp_invoices i 
+                     WHERE i.patient_id = p.id 
+                     AND i.status != 'paid') AS invoice_status
                 FROM tp_patients p
                 JOIN tp_owners o ON o.id = p.owner_id
                 WHERE 1=1
@@ -145,7 +157,19 @@ try {
                     o.street AS owner_street,
                     o.house_number AS owner_house_number,
                     o.postal_code AS owner_postal_code,
-                    o.city AS owner_city
+                    o.city AS owner_city,
+                    (SELECT DATE_FORMAT(MIN(a.appointment_date), '%d.%m.%Y') 
+                     FROM tp_appointments a 
+                     WHERE a.patient_id = p.id 
+                     AND a.appointment_date >= CURDATE() 
+                     AND a.status IN ('scheduled','confirmed')) AS next_appointment,
+                    (SELECT CASE 
+                        WHEN COUNT(*) > 0 THEN 'open' 
+                        ELSE 'paid' 
+                     END 
+                     FROM tp_invoices i 
+                     WHERE i.patient_id = p.id 
+                     AND i.status != 'paid') AS invoice_status
                 FROM tp_patients p
                 LEFT JOIN tp_owners o ON o.id = p.owner_id
                 WHERE p.id = :id
@@ -549,6 +573,30 @@ try {
             } else {
                 api_error('Fehler beim Hochladen der Datei', 500);
             }
+            break;
+            
+        case 'get_appointments':
+            $id = intval($_GET['id'] ?? 0);
+            
+            if (!$id) {
+                api_error('Patient ID fehlt', 400);
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT 
+                    id, 
+                    DATE_FORMAT(appointment_date, '%d.%m.%Y') as appointment_date, 
+                    TIME_FORMAT(start_time, '%H:%i') as start_time, 
+                    status 
+                FROM tp_appointments 
+                WHERE patient_id = ? 
+                AND appointment_date >= CURDATE() 
+                ORDER BY appointment_date ASC, start_time ASC
+            ");
+            $stmt->execute([$id]);
+            $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            api_success(['appointments' => $appointments]);
             break;
             
         case 'delete':
