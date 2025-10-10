@@ -12,14 +12,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $auth = new StandaloneAuth($pdo);
 
-// Debug-Logging
-error_log("[AUTH DEBUG] admin/login.php - Session user_id: " . ($_SESSION['user_id'] ?? 'none'));
-
 // If already logged in as admin, redirect to dashboard
 if ($auth->isLoggedIn()) {
     $userId = $auth->getUserId();
-    error_log("[AUTH DEBUG] admin/login.php - User is logged in with ID: $userId");
-    
     $stmt = $pdo->prepare("
         SELECT COUNT(*) 
         FROM tp_user_roles ur 
@@ -29,11 +24,8 @@ if ($auth->isLoggedIn()) {
     $stmt->execute([$userId]);
     
     if ($stmt->fetchColumn() > 0) {
-        error_log("[AUTH DEBUG] admin/login.php - User is admin, redirecting to dashboard");
         header('Location: /admin/dashboard.php');
         exit;
-    } else {
-        error_log("[AUTH DEBUG] admin/login.php - User is not admin");
     }
 }
 
@@ -84,20 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($stmt->fetchColumn() > 0) {
                     // Admin login successful
-                    // Setze normale Session-Variablen (auth->login hat bereits user_id gesetzt)
                     $_SESSION['admin']['user_id'] = $userId;
                     $_SESSION['admin']['logged_in'] = true;
                     $_SESSION['admin']['csrf_token'] = bin2hex(random_bytes(32));
-                    
-                    error_log("[AUTH DEBUG] admin/login.php - Admin login successful for user $userId");
                     
                     // Clear login attempts
                     unset($_SESSION['admin_login_attempts']);
                     unset($_SESSION['admin_last_attempt']);
                     unset($_SESSION['admin_login_csrf']);
-                    
-                    // Regenerate session ID for security
-                    session_regenerate_id(true);
                     
                     header('Location: /admin/dashboard.php');
                     exit;
