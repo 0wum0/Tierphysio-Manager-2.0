@@ -260,3 +260,6 @@ class Auth {
         return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
     }
 }
+
+// Alias für Kompatibilität
+class StandaloneAuth extends Auth {}
