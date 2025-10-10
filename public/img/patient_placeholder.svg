@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#f3e8ff"/>
+  
+  <!-- Paw Print Pattern -->
+  <g opacity="0.1">
+    <!-- Main paw pad -->
+    <ellipse cx="200" cy="220" rx="50" ry="60" fill="#9333ea"/>
+    
+    <!-- Toe pads -->
+    <ellipse cx="170" cy="170" rx="25" ry="35" fill="#9333ea" transform="rotate(-20 170 170)"/>
+    <ellipse cx="200" cy="155" rx="25" ry="35" fill="#9333ea"/>
+    <ellipse cx="230" cy="170" rx="25" ry="35" fill="#9333ea" transform="rotate(20 230 170)"/>
+    <ellipse cx="245" cy="195" rx="20" ry="28" fill="#9333ea" transform="rotate(40 245 195)"/>
+    <ellipse cx="155" cy="195" rx="20" ry="28" fill="#9333ea" transform="rotate(-40 155 195)"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="200" y="320" font-family="Arial, sans-serif" font-size="24" font-weight="600" text-anchor="middle" fill="#9333ea">
+    Kein Bild
+  </text>
+</svg>
