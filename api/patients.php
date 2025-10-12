@@ -676,97 +676,66 @@ switch ($action) {
         break;
         
     case 'upload_image':
-        try {
-            if (!isset($_FILES['image']) || !isset($_POST['id'])) {
-                api_error('Kein Bild oder keine ID übergeben.');
-            }
-
-            $id = intval($_POST['id']);
-            if ($id <= 0) api_error('Ungültige Patienten-ID.');
-
-            $file = $_FILES['image'];
-            if ($file['error'] !== UPLOAD_ERR_OK) {
-                api_error('Uploadfehler: '.$file['error']);
-            }
-
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg','jpeg','png','gif','webp'];
-            if (!in_array($ext, $allowed)) {
-                api_error('Ungültiges Dateiformat.');
-            }
-
-            $dir = __DIR__.'/../uploads/patients/'.$id.'/';
-            if (!is_dir($dir)) mkdir($dir, 0775, true);
-
-            $filename = 'profile_'.time().'.'.$ext;
-            $target = $dir.$filename;
-
-            if (!move_uploaded_file($file['tmp_name'], $target)) {
-                api_error('Fehler beim Verschieben der Datei.');
-            }
-
-            $relative = 'uploads/patients/'.$id.'/'.$filename;
-
-            $stmt = $pdo->prepare("UPDATE tp_patients SET image=? WHERE id=?");
-            $stmt->execute([$relative, $id]);
-
-            api_success(['message'=>'Bild erfolgreich gespeichert.','path'=>$relative,'id'=>$id]);
-        } catch (Exception $e) {
-            api_error('Fehler: '.$e->getMessage());
+      try {
+        if (!isset($_FILES['image']) || empty($_POST['id'])) {
+          api_error('Kein Bild oder keine Patienten-ID übergeben.');
         }
-        break;
+
+        $id = intval($_POST['id']);
+        if ($id <= 0) api_error('Ungültige ID.');
+
+        $file = $_FILES['image'];
+        if ($file['error'] !== UPLOAD_ERR_OK) api_error('Uploadfehler: ' . $file['error']);
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg','jpeg','png','webp','gif'];
+        if (!in_array($ext, $allowed)) api_error('Ungültiges Format.');
+
+        $dir = __DIR__ . '/../uploads/patients/' . $id . '/';
+        if (!is_dir($dir)) mkdir($dir, 0775, true);
+
+        $filename = 'profile_' . time() . '.' . $ext;
+        $target = $dir . $filename;
+        move_uploaded_file($file['tmp_name'], $target);
+
+        $relative = 'uploads/patients/' . $id . '/' . $filename;
+        $stmt = $pdo->prepare("UPDATE tp_patients SET image=? WHERE id=?");
+        $stmt->execute([$relative, $id]);
+
+        api_success(['message'=>'Bild gespeichert.','path'=>$relative]);
+      } catch (Exception $e) {
+        api_error($e->getMessage());
+      }
+      break;
         
     case 'upload_document':
-        try {
-            if (empty($_FILES['file']) || empty($_POST['id'])) {
-                api_error('Kein Dokument oder keine Patienten-ID übergeben.');
-            }
+      try {
+        if (empty($_FILES['file']) || empty($_POST['id'])) api_error('Kein Dokument oder keine ID.');
 
-            $patient_id = intval($_POST['id']);
-            $file = $_FILES['file'];
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $allowed = ['pdf','jpg','jpeg','png','gif','webp'];
-            if (!in_array($ext, $allowed)) {
-                api_error('Ungültiges Dateiformat.');
-            }
+        $pid = intval($_POST['id']);
+        $file = $_FILES['file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['pdf','jpg','jpeg','png','webp'];
+        if (!in_array($ext, $allowed)) api_error('Ungültiges Format.');
 
-            $uploadDir = __DIR__ . '/../uploads/patients/' . $patient_id . '/docs/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0775, true);
+        $pathDir = __DIR__ . '/../uploads/patients/' . $pid . '/docs/';
+        if (!is_dir($pathDir)) mkdir($pathDir, 0775, true);
 
-            $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/','_', $file['name']);
-            $targetPath = $uploadDir . $filename;
-            $relativePath = 'uploads/patients/' . $patient_id . '/docs/' . $filename;
+        $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/','_', $file['name']);
+        $target = $pathDir . $safeName;
+        move_uploaded_file($file['tmp_name'], $target);
 
-            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                api_error('Fehler beim Upload.');
-            }
+        $relPath = 'uploads/patients/' . $pid . '/docs/' . $safeName;
+        $stmt = $pdo->prepare("INSERT INTO tp_documents (patient_id,title,file_name,file_path,file_size,mime_type,uploaded_by)
+                               VALUES (?,?,?,?,?,?,?)");
+        $stmt->execute([$pid, pathinfo($file['name'], PATHINFO_FILENAME),
+                        $safeName, $relPath, $file['size'], $file['type'], $_SESSION['user_id'] ?? 0]);
 
-            // Get session for user ID
-            session_start();
-            $user_id = $_SESSION['user_id'] ?? 0;
-
-            $stmt = $pdo->prepare("
-                INSERT INTO tp_documents (patient_id, title, file_name, file_path, file_size, mime_type, uploaded_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([
-                $patient_id,
-                pathinfo($file['name'], PATHINFO_FILENAME),
-                $filename,
-                $relativePath,
-                $file['size'],
-                $file['type'],
-                $user_id
-            ]);
-
-            $docId = $pdo->lastInsertId();
-            $doc = $pdo->query("SELECT * FROM tp_documents WHERE id = $docId")->fetch(PDO::FETCH_ASSOC);
-
-            api_success(['message'=>'Dokument erfolgreich hochgeladen.','document'=>$doc]);
-        } catch (Exception $e) {
-            api_error('Fehler beim Hochladen: '.$e->getMessage());
-        }
-        break;
+        api_success(['message'=>'Dokument hochgeladen.','path'=>$relPath]);
+      } catch (Exception $e) {
+        api_error('Fehler: '.$e->getMessage());
+      }
+      break;
 
     case 'delete_document':
         try {
