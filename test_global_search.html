@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Search Test - Tierphysio Manager 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-purple-600">🔍 Global Search & Upload Test</h1>
+        
+        <!-- Search Test -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6" x-data="{
+            query: '',
+            results: [],
+            async search() {
+                if (this.query.length < 2) {
+                    this.results = [];
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/search.php?q=' + encodeURIComponent(this.query));
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.results = data.results;
+                    }
+                } catch (err) {
+                    console.error('Search error:', err);
+                }
+            }
+        }">
+            <h2 class="text-xl font-semibold mb-4">1️⃣ Globale Suche testen</h2>
+            <input type="text" 
+                   x-model="query" 
+                   @input.debounce.300ms="search()"
+                   placeholder="Suche nach Patient oder Besitzer..."
+                   class="w-full px-4 py-2 border rounded-lg mb-4">
+            
+            <div x-show="results.length > 0" class="border rounded-lg overflow-hidden">
+                <template x-for="result in results" :key="result.type + '_' + result.id">
+                    <div class="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-medium" x-text="result.name"></span>
+                                <span class="text-sm text-gray-500 ml-2" x-text="result.subtitle"></span>
+                            </div>
+                            <span x-text="result.type" 
+                                  :class="result.type === 'patient' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'"
+                                  class="px-2 py-1 rounded text-xs"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="results.length === 0 && query.length >= 2" class="text-gray-500 text-sm mt-2">
+                Keine Ergebnisse gefunden
+            </div>
+        </div>
+        
+        <!-- Upload Test -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6" x-data="{
+            patientId: 1,
+            uploadImage() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    formData.append('id', this.patientId);
+                    
+                    try {
+                        const res = await fetch('/api/patients.php?action=upload_image', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        alert(data.status + ': ' + data.message);
+                    } catch (err) {
+                        alert('Upload-Fehler: ' + err.message);
+                    }
+                };
+                input.click();
+            },
+            uploadDocument() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf,.jpg,.jpeg,.png';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('id', this.patientId);
+                    
+                    try {
+                        const res = await fetch('/api/patients.php?action=upload_document', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        alert(data.status + ': ' + data.message);
+                    } catch (err) {
+                        alert('Upload-Fehler: ' + err.message);
+                    }
+                };
+                input.click();
+            }
+        }">
+            <h2 class="text-xl font-semibold mb-4">2️⃣ Upload-Funktionen testen</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Patient ID:</label>
+                <input type="number" x-model="patientId" class="px-3 py-1 border rounded">
+            </div>
+            <div class="space-x-4">
+                <button @click="uploadImage()" 
+                        class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                    📷 Bild hochladen
+                </button>
+                <button @click="uploadDocument()" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    📄 Dokument hochladen
+                </button>
+            </div>
+        </div>
+        
+        <!-- API Status Test -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">3️⃣ API Status</h2>
+            <div id="apiStatus" class="space-y-2"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Test API endpoints
+        async function testAPIs() {
+            const statusDiv = document.getElementById('apiStatus');
+            
+            const endpoints = [
+                { name: 'Search API', url: '/api/search.php?q=test' },
+                { name: 'Patients List', url: '/api/patients.php?action=list' },
+                { name: 'Patients Get', url: '/api/patients.php?action=get&id=1' }
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const res = await fetch(endpoint.url);
+                    const data = await res.json();
+                    const status = data.status === 'success' ? '✅' : '❌';
+                    statusDiv.innerHTML += `
+                        <div class="flex justify-between items-center p-2 border rounded">
+                            <span>${endpoint.name}</span>
+                            <span class="${data.status === 'success' ? 'text-green-600' : 'text-red-600'}">
+                                ${status} ${data.status || 'error'}
+                            </span>
+                        </div>
+                    `;
+                } catch (err) {
+                    statusDiv.innerHTML += `
+                        <div class="flex justify-between items-center p-2 border rounded">
+                            <span>${endpoint.name}</span>
+                            <span class="text-red-600">❌ ${err.message}</span>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Run tests on page load
+        document.addEventListener('DOMContentLoaded', testAPIs);
+    </script>
+</body>
+</html>

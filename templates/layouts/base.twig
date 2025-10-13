@@ -330,6 +330,37 @@
                 easing: 'easeOutExpo'
             });
         });
+        
+        // Global event handler for owner search
+        window.addEventListener('open-owner-search', async (e) => {
+            const owner = e.detail;
+            try {
+                // Fetch all patients and find those belonging to this owner
+                const response = await fetch('/api/patients.php?action=list');
+                const data = await response.json();
+                
+                if (data.status === 'success' || data.ok === true) {
+                    const items = data.data?.items ?? data.data?.data ?? data.data ?? [];
+                    // Find patients belonging to this owner
+                    const ownerPatients = items.filter(p => 
+                        p.owner_full_name && p.owner_full_name.toLowerCase().includes(owner.name.toLowerCase())
+                    );
+                    
+                    if (ownerPatients.length > 0) {
+                        // Open the first patient of this owner
+                        window.dispatchEvent(new CustomEvent('open-patient-modal', { 
+                            detail: { id: ownerPatients[0].id, type: 'patient' }
+                        }));
+                    } else {
+                        // Show a notification that no patients found for this owner
+                        showToast('Keine Patienten für diesen Besitzer gefunden', 'info');
+                    }
+                }
+            } catch (error) {
+                console.error('Error finding owner patients:', error);
+                showToast('Fehler beim Suchen der Patienten', 'error');
+            }
+        });
     </script>
     
     {% block scripts %}{% endblock %}
