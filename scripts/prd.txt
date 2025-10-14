@@ -1,0 +1,408 @@
+PROJECT: Tierphysio Manager 2.0
+DESCRIPTION:
+A modern, full-stack web application for managing a veterinary physiotherapy practice.
+Technologies: PHP 8.3, MySQL, Twig, TailwindCSS, Alpine.js, Anime.js.
+Goal: 100% functional practice manager — not a demo. All features must operate with real DB data.
+
+STRUCTURE OVERVIEW:
+Root Folder (/workspace/)
+│
+├── /api/                 → JSON endpoints for AJAX calls
+│     ├── patients.php    → CRUD operations for patients
+│     ├── owners.php      → CRUD operations for owners
+│     ├── appointments.php → CRUD operations for appointments
+│     ├── treatments.php  → CRUD operations for treatments
+│     ├── invoices.php    → CRUD operations for invoices
+│     ├── notes.php       → CRUD operations for notes
+│     ├── search.php      → Global search endpoint
+│     ├── integrity_json.php → API validation & testing
+│     ├── settings.php    → Application settings management
+│     ├── stats.php       → Statistics & analytics data
+│     ├── backup.php      → Database backup management
+│     ├── users.php       → User management
+│     └── _bootstrap.php  → Common API initialization
+│
+├── /includes/            → PHP logic, database, authentication, template renderer
+│     ├── db.php          → Database connection & PDO wrapper
+│     ├── Database.php    → Database class implementation
+│     ├── Auth.php        → Authentication class
+│     ├── SimpleAuth.php  → Simple auth implementation
+│     ├── StandaloneAuth.php → Standalone auth for testing
+│     ├── Template.php    → Template engine class
+│     ├── SimpleTemplate.php → Simple template implementation
+│     ├── template.php    → Template helper functions
+│     ├── csrf.php        → CSRF protection
+│     ├── response.php    → JSON response helpers
+│     ├── functions.php   → Common helper functions
+│     ├── version.php     → Version tracking
+│     └── auto_migrate_documents.php → Document migration helper
+│
+├── /templates/           → Twig templates
+│     ├── /layouts/
+│     │     ├── base.twig → Base layout with header/footer
+│     │     └── modal.twig → Modal layout template
+│     ├── /partials/
+│     │     ├── header.twig → Header with navigation & search
+│     │     ├── sidebar.twig → Sidebar navigation
+│     │     ├── footer.twig → Footer with copyright
+│     │     └── search.twig → Search component
+│     ├── /pages/
+│     │     ├── dashboard.twig → Dashboard with KPIs & charts
+│     │     ├── patients.twig → Patient list & management
+│     │     ├── owners.twig → Owner list & management
+│     │     ├── appointments.twig → Appointment calendar & list
+│     │     ├── treatments.twig → Treatment records
+│     │     ├── invoices.twig → Invoice management
+│     │     ├── notes.twig → Notes management
+│     │     ├── admin.twig → Admin panel
+│     │     ├── login.twig → Login page
+│     │     ├── settings.twig → Settings page
+│     │     └── error.twig → Error page
+│
+├── /public/              → Frontend pages and assets (entry points)
+│     ├── index.php       → Main entry point
+│     ├── dashboard.php   → Dashboard page
+│     ├── patients.php    → Patients page
+│     ├── owners.php      → Owners page
+│     ├── appointments.php → Appointments page
+│     ├── treatments.php  → Treatments page
+│     ├── invoices.php    → Invoices page
+│     ├── notes.php       → Notes page
+│     ├── admin.php       → Admin panel
+│     ├── settings.php    → Settings page
+│     ├── login.php       → Login page
+│     ├── logout.php      → Logout handler
+│     ├── js/
+│     │     ├── app.js    → Main JavaScript application
+│     │     ├── api.js    → API communication layer
+│     │     ├── patients.js → Patient-specific JS
+│     │     ├── owners.js → Owner-specific JS
+│     │     ├── modals.js → Modal management
+│     │     └── admin.js  → Admin panel JS
+│     ├── img/
+│     │     └── patient_placeholder.svg → Placeholder images
+│     └── uploads/
+│           ├── patient_photos/ → Patient photo uploads
+│           └── documents/ → Document uploads
+│
+├── /installer/           → Installer + migrations + update scripts
+│     └── index.php       → Installation wizard
+│
+├── /migrations/          → Versioned DB patches
+│     ├── 001_initial_schema.sql → Initial database schema
+│     ├── 002_create_tp_tables.sql → Tierphysio specific tables
+│     ├── 003_default_settings.sql → Default settings
+│     └── 004_patient_tabs.sql → Patient tabs structure
+│
+├── /integrity/           → Automatic integrity & JSON test tools
+│     ├── db_check.php    → Database integrity check
+│     ├── http_smoke.php  → HTTP endpoint testing
+│     └── test_patients_api.php → Patient API testing
+│
+├── /backups/             → Auto-generated backups
+│
+├── /data/                → Database files
+│     ├── tierphysio.db   → SQLite database
+│     └── init_db.sql     → Database initialization
+│
+├── /logs/                → Application logs
+│     └── api.log         → API request/response logs
+│
+├── /scripts/             → Project management & documentation
+│     ├── prd.txt         → Product requirements document
+│     ├── tasks.json      → Current task list
+│     └── cursor-rules.md → Development guidelines
+│
+└── /setup/               → Setup & test data
+      └── test_data.sql   → Test data for development
+
+---
+
+CORE FEATURES:
+
+1️⃣ PATIENTENVERWALTUNG:
+   - CRUD (create/read/update/delete) operations
+   - Modal view with tabs: Befunde, Notizen, Dokumente, Rechnungen
+   - Photo upload (stored in /uploads/patient_photos/)
+   - Linked owner data shown on each card
+   - Live status: invoice open/paid, next appointment date
+   - Search & filter capabilities
+   - Export functionality
+
+2️⃣ BESITZERVERWALTUNG:
+   - CRUD operations
+   - Linked patients display
+   - Auto-numbering for customer_number
+   - Invoice overview per owner
+   - Contact information management
+   - Emergency contact details
+
+3️⃣ TERMINVERWALTUNG:
+   - Create/edit/cancel appointments
+   - Linked to patient and therapist
+   - Calendar + list view
+   - Upcoming appointment visible on patient card
+   - Recurring appointment support
+   - Reminder system
+   - Status tracking (scheduled, confirmed, completed, cancelled)
+
+4️⃣ BEHANDLUNGEN:
+   - Diagnosis, notes, methods, pain scale
+   - Linked to appointments and patients
+   - Treatment history tracking
+   - Progress monitoring
+   - PDF export for reports
+   - Template support for common treatments
+
+5️⃣ RECHNUNGEN:
+   - Automatic invoice number generation
+   - Status tracking (draft, sent, paid, overdue)
+   - Linked to patients and owners
+   - Chart.js revenue statistics
+   - Payment tracking
+   - Export to PDF
+   - Email integration
+
+6️⃣ NOTIZEN & DOKUMENTE:
+   - General, medical, reminder notes
+   - File upload (PDF, images, documents)
+   - Linked by patient_id or appointment_id
+   - Inline preview capabilities
+   - Version tracking
+   - Search within documents
+
+7️⃣ GLOBALE SUCHE:
+   - Topbar search (Alpine.js)
+   - Dropdown results (patients + owners)
+   - Opens patient modal on click
+   - Responsive, full-width dropdown
+   - Real-time search results
+   - Search history
+
+8️⃣ DASHBOARD:
+   - Displays KPIs: Total patients, invoices, revenue
+   - Chart.js graphs (weekly/monthly revenue)
+   - Recent appointments list
+   - Upcoming appointments
+   - Outstanding invoices
+   - Quick actions panel
+   - Activity feed
+
+9️⃣ DESIGN & UX:
+   - TailwindCSS + Alpine.js
+   - Dark/Light theme toggle
+   - Footer centered under content
+   - Modals fixed-centered on screen
+   - Tabs scrollable inside modal only
+   - Smooth transitions via Anime.js
+   - Responsive design (mobile-first)
+   - Accessibility compliance (WCAG 2.1)
+
+🔟 SICHERHEIT:
+   - User authentication system
+   - Role-based access control
+   - CSRF protection
+   - Input validation
+   - SQL injection prevention
+   - XSS protection
+   - Secure file uploads
+   - Session management
+   - API rate limiting
+
+---
+
+DATABASE SCHEMA:
+
+patients:
+- id (INTEGER PRIMARY KEY)
+- name (VARCHAR)
+- species (VARCHAR)
+- breed (VARCHAR)
+- age (INTEGER)
+- owner_id (INTEGER FOREIGN KEY)
+- photo (TEXT)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+owners:
+- id (INTEGER PRIMARY KEY)
+- customer_number (VARCHAR UNIQUE)
+- name (VARCHAR)
+- email (VARCHAR)
+- phone (VARCHAR)
+- address (TEXT)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+appointments:
+- id (INTEGER PRIMARY KEY)
+- patient_id (INTEGER FOREIGN KEY)
+- therapist_id (INTEGER FOREIGN KEY)
+- date (DATE)
+- time (TIME)
+- duration (INTEGER)
+- status (VARCHAR)
+- notes (TEXT)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+treatments:
+- id (INTEGER PRIMARY KEY)
+- appointment_id (INTEGER FOREIGN KEY)
+- patient_id (INTEGER FOREIGN KEY)
+- diagnosis (TEXT)
+- methods (TEXT)
+- pain_scale (INTEGER)
+- notes (TEXT)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+invoices:
+- id (INTEGER PRIMARY KEY)
+- invoice_number (VARCHAR UNIQUE)
+- patient_id (INTEGER FOREIGN KEY)
+- owner_id (INTEGER FOREIGN KEY)
+- amount (DECIMAL)
+- status (VARCHAR)
+- due_date (DATE)
+- paid_date (DATE)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+notes:
+- id (INTEGER PRIMARY KEY)
+- patient_id (INTEGER FOREIGN KEY)
+- appointment_id (INTEGER FOREIGN KEY)
+- type (VARCHAR)
+- content (TEXT)
+- created_by (INTEGER FOREIGN KEY)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+documents:
+- id (INTEGER PRIMARY KEY)
+- patient_id (INTEGER FOREIGN KEY)
+- title (VARCHAR)
+- filename (VARCHAR)
+- file_path (TEXT)
+- file_size (INTEGER)
+- uploaded_by (INTEGER FOREIGN KEY)
+- created_at (TIMESTAMP)
+
+users:
+- id (INTEGER PRIMARY KEY)
+- username (VARCHAR UNIQUE)
+- email (VARCHAR)
+- password_hash (VARCHAR)
+- role (VARCHAR)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+settings:
+- id (INTEGER PRIMARY KEY)
+- key (VARCHAR UNIQUE)
+- value (TEXT)
+- updated_at (TIMESTAMP)
+
+---
+
+API ENDPOINTS:
+
+GET /api/patients.php - List all patients
+GET /api/patients.php?id={id} - Get patient by ID
+POST /api/patients.php - Create new patient
+PUT /api/patients.php?id={id} - Update patient
+DELETE /api/patients.php?id={id} - Delete patient
+
+GET /api/owners.php - List all owners
+GET /api/owners.php?id={id} - Get owner by ID
+POST /api/owners.php - Create new owner
+PUT /api/owners.php?id={id} - Update owner
+DELETE /api/owners.php?id={id} - Delete owner
+
+GET /api/appointments.php - List appointments
+GET /api/appointments.php?patient_id={id} - Get appointments for patient
+POST /api/appointments.php - Create appointment
+PUT /api/appointments.php?id={id} - Update appointment
+DELETE /api/appointments.php?id={id} - Delete appointment
+
+GET /api/treatments.php - List treatments
+GET /api/treatments.php?patient_id={id} - Get treatments for patient
+POST /api/treatments.php - Create treatment
+PUT /api/treatments.php?id={id} - Update treatment
+DELETE /api/treatments.php?id={id} - Delete treatment
+
+GET /api/invoices.php - List invoices
+GET /api/invoices.php?status={status} - Filter by status
+POST /api/invoices.php - Create invoice
+PUT /api/invoices.php?id={id} - Update invoice
+DELETE /api/invoices.php?id={id} - Delete invoice
+
+GET /api/notes.php - List notes
+GET /api/notes.php?patient_id={id} - Get notes for patient
+POST /api/notes.php - Create note
+PUT /api/notes.php?id={id} - Update note
+DELETE /api/notes.php?id={id} - Delete note
+
+GET /api/search.php?q={query} - Global search
+GET /api/stats.php - Get statistics
+GET /api/settings.php - Get settings
+POST /api/settings.php - Update settings
+
+---
+
+TECHNOLOGY STACK:
+
+Backend:
+- PHP 8.3
+- SQLite/MySQL
+- PDO for database access
+- Twig template engine
+- Composer for dependencies
+
+Frontend:
+- HTML5 semantic markup
+- TailwindCSS for styling
+- Alpine.js for interactivity
+- Anime.js for animations
+- Chart.js for data visualization
+- Vanilla JavaScript for custom logic
+
+Development:
+- Git for version control
+- Composer for PHP dependencies
+- NPM for frontend tools (optional)
+- PHPUnit for testing (planned)
+
+---
+
+DEPLOYMENT:
+
+Requirements:
+- PHP 8.3+
+- SQLite 3.x or MySQL 5.7+
+- Web server (Apache/Nginx)
+- Write permissions for uploads/backups
+- Composer for dependency installation
+
+Installation:
+1. Clone repository
+2. Run composer install
+3. Configure includes/config.php
+4. Run installer/index.php
+5. Set up cron for backups
+
+---
+
+CURRENT STATUS:
+- Basic structure implemented
+- Database schema created
+- API endpoints functional
+- Template system working
+- Authentication implemented
+- Patient management working
+- Owner management working
+- Search functionality partial
+- Dashboard needs charts integration
+- Invoice system needs completion
+- Document upload needs fixing
