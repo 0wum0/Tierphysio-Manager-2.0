@@ -49,6 +49,16 @@ function patientModal() {
                 if (data.status === "success" || data.ok === true) {
                     this.patient = data.patient || data.data?.items?.[0] || data.data?.[0] || null;
                     
+                    // Ensure owner_full_name is properly set
+                    if (this.patient) {
+                        this.patient.owner_full_name = this.patient.owner_full_name && this.patient.owner_full_name !== "0"
+                            ? this.patient.owner_full_name
+                            : (this.patient.owner_name || 
+                               (this.patient.owner_first_name && this.patient.owner_last_name 
+                                ? `${this.patient.owner_first_name} ${this.patient.owner_last_name}`
+                                : "Unbekannter Besitzer"));
+                    }
+                    
                     // Load all related data in parallel
                     await Promise.all([
                         this.loadRecords(id),
