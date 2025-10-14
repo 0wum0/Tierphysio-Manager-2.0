@@ -728,8 +728,15 @@ switch ($action) {
         $relPath = 'uploads/patients/' . $pid . '/docs/' . $safeName;
         $stmt = $pdo->prepare("INSERT INTO tp_documents (patient_id,title,file_name,file_path,file_size,mime_type,uploaded_by)
                                VALUES (?,?,?,?,?,?,?)");
-        $stmt->execute([$pid, pathinfo($file['name'], PATHINFO_FILENAME),
-                        $safeName, $relPath, $file['size'], $file['type'], $_SESSION['user_id'] ?? 0]);
+        $stmt->execute([
+            $pid, 
+            pathinfo($file['name'], PATHINFO_FILENAME),
+            $safeName, 
+            $relPath, 
+            $file['size'], 
+            $file['type'], 
+            !empty($_SESSION['user_id']) ? $_SESSION['user_id'] : null
+        ]);
 
         api_success(['message'=>'Dokument hochgeladen.','path'=>$relPath]);
       } catch (Exception $e) {

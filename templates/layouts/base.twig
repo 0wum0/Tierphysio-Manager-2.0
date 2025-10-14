@@ -172,6 +172,65 @@
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        
+        /* === Global Search Dropdown Styling === */
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-in-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0; 
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+        
+        .shadow-2xl {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        }
+        
+        /* Enhanced blur and glass morphism effects */
+        .backdrop-blur-lg {
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+        }
+        
+        .backdrop-blur-md {
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+        }
+        
+        /* Make search input more responsive */
+        @media (max-width: 768px) {
+            .max-w-md {
+                max-width: 100%;
+            }
+            
+            /* Adjust search dropdown on mobile */
+            .relative.w-full.max-w-md {
+                max-width: 100%;
+            }
+        }
+        
+        /* Smooth hover transitions for search results */
+        .hover\:bg-indigo-600\/70:hover {
+            background-color: rgba(79, 70, 229, 0.7);
+        }
+        
+        /* Dark mode input styling */
+        .dark input[type="text"],
+        .dark input[type="search"] {
+            color: #e5e7eb;
+        }
+        
+        .dark input[type="text"]::placeholder,
+        .dark input[type="search"]::placeholder {
+            color: #9ca3af;
+        }
     </style>
     
     {% block head %}{% endblock %}
