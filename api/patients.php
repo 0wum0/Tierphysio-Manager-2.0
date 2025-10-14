@@ -726,6 +726,8 @@ switch ($action) {
         move_uploaded_file($file['tmp_name'], $target);
 
         $relPath = 'uploads/patients/' . $pid . '/docs/' . $safeName;
+        // FIX: uploaded_by fallback zu Admin User (ID=1), damit nie NULL
+        $uploadedBy = !empty($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
         $stmt = $pdo->prepare("INSERT INTO tp_documents (patient_id,title,file_name,file_path,file_size,mime_type,uploaded_by)
                                VALUES (?,?,?,?,?,?,?)");
         $stmt->execute([
@@ -735,7 +737,7 @@ switch ($action) {
             $relPath, 
             $file['size'], 
             $file['type'], 
-            !empty($_SESSION['user_id']) ? $_SESSION['user_id'] : null
+            $uploadedBy
         ]);
 
         api_success(['message'=>'Dokument hochgeladen.','path'=>$relPath]);

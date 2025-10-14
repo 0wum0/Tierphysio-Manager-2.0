@@ -305,7 +305,52 @@
                     localStorage.setItem('darkMode', this.darkMode);
                 }
             });
+            
+            // Global Patient Store for modal handling
+            Alpine.store('patients', {
+                modalOpen: false,
+                currentPatient: null,
+                async openModal(patient) {
+                    this.currentPatient = patient;
+                    this.modalOpen = true;
+                }
+            });
         });
+        
+        // Global function to open patient modal from search
+        window.openPatientModal = async function(item) {
+            if (!item) return;
+            
+            // If it's a patient, open the modal
+            if (item.type === 'patient') {
+                try {
+                    const res = await fetch('/api/patients.php?action=get&id=' + item.id);
+                    const data = await res.json();
+                    
+                    if (data.status === 'success' && data.patient) {
+                        // Check if we're on the patients page with modal
+                        if (window.Alpine && Alpine.store('patients')) {
+                            Alpine.store('patients').openModal(data.patient);
+                        } else {
+                            // Dispatch event for patient modal component
+                            window.dispatchEvent(new CustomEvent('open-patient-modal', {
+                                detail: { id: item.id }
+                            }));
+                        }
+                    } else {
+                        showToast('Patientendaten konnten nicht geladen werden.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading patient:', error);
+                    showToast('Fehler beim Laden der Patientendaten.', 'error');
+                }
+            } else if (item.type === 'owner') {
+                // Handle owner click - find their patients
+                window.dispatchEvent(new CustomEvent('open-owner-search', {
+                    detail: item
+                }));
+            }
+        };
         
         // Show toast notification
         function showToast(message, type = 'info', duration = 5000) {

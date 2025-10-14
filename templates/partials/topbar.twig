@@ -14,7 +14,7 @@
             </button>
             
             <!-- Global Search Bar with Enhanced Live Dropdown -->
-            <div x-data="{q:'',results:[],show:false}" class="relative w-full max-w-md mx-4">
+            <div x-data="{q:'',results:[],show:false}" class="relative w-full sm:w-80 mx-4">
                 <input type="text" placeholder="🔍 Suche nach Patienten oder Besitzern..."
                        x-model="q"
                        @input.debounce.500ms="async()=>{
@@ -23,7 +23,7 @@
                          const data=await res.json();
                          if(data.status==='success'){results=data.results;show=true;}
                        }"
-                       class="rounded-xl bg-gray-800/70 backdrop-blur-md text-gray-200 text-sm px-4 py-2 w-full focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 placeholder-gray-400"
+                       class="rounded-xl bg-gray-100 dark:bg-gray-800/70 backdrop-blur-md text-gray-800 dark:text-gray-200 text-sm px-4 py-2 w-full focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 
                 <div x-show="show && results.length>0"
@@ -34,22 +34,22 @@
                      x-transition:leave="transition ease-in duration-150"
                      x-transition:leave-start="opacity-100 transform translate-y-0"
                      x-transition:leave-end="opacity-0 transform -translate-y-2"
-                     class="absolute z-50 bg-gray-900/90 backdrop-blur-lg border border-gray-700 rounded-xl mt-1 w-full max-h-72 overflow-y-auto shadow-2xl">
+                     class="absolute z-50 bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-xl mt-1 w-full sm:w-80 max-h-72 overflow-y-auto shadow-2xl animate-fade-in">
                     <template x-for="r in results" :key="r.id">
-                        <div @click="$dispatch('open-patient-modal', r)"
-                             class="px-4 py-3 hover:bg-indigo-600/70 text-gray-200 cursor-pointer flex justify-between items-center transition-colors duration-150 border-b border-gray-700/50 last:border-0">
+                        <div @click="show=false; window.openPatientModal(r)"
+                             class="px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-600/70 text-gray-800 dark:text-gray-200 cursor-pointer flex justify-between items-center transition-colors duration-150 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
                             <div class="flex items-center space-x-3">
                                 <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center">
                                     <span class="text-lg" x-text="r.icon || '🐾'"></span>
                                 </div>
                                 <div>
                                     <span x-text="r.name" class="font-medium block"></span>
-                                    <span x-text="r.subtitle" class="text-xs text-gray-400 block"></span>
+                                    <span x-text="r.subtitle" class="text-xs text-gray-500 dark:text-gray-400 block"></span>
                                 </div>
                             </div>
                             <span x-text="r.type === 'patient' ? 'Patient' : 'Besitzer'" 
                                   :class="r.type === 'patient' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'"
-                                  class="text-xs px-2 py-1 rounded-full"></span>
+                                  class="text-xs px-2 py-1 rounded-full font-medium"></span>
                         </div>
                     </template>
                 </div>
