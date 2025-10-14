@@ -109,6 +109,13 @@ function render_template($path, $data = []) {
             'description' => 'Moderne Praxisverwaltung für Tierphysiotherapie'
         ]);
         
+        // Add user data from session if available
+        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['user'])) {
+            $twig->addGlobal('user', $_SESSION['user']);
+        } elseif (isset($data['user'])) {
+            $twig->addGlobal('user', $data['user']);
+        }
+        
         // Add flash messages if available
         if (session_status() === PHP_SESSION_ACTIVE) {
             if (isset($_SESSION['flash_success'])) {
