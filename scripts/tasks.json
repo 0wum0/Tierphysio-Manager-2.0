@@ -1,0 +1,293 @@
+[
+  {
+    "id": 1,
+    "title": "Fix Patient modal & data binding",
+    "status": "pending",
+    "priority": "high",
+    "files": [
+      "templates/pages/patients.twig",
+      "public/js/patients.js",
+      "api/patients.php"
+    ],
+    "description": "Ensure modal displays correct patient data, including owner name, photo, appointments, invoices. Modal should properly bind to clicked patient card.",
+    "acceptance_criteria": [
+      "Modal opens with correct patient data",
+      "Owner information is displayed",
+      "Photo loads correctly or shows placeholder",
+      "Tabs function properly (Befunde, Notizen, Dokumente, Rechnungen)",
+      "Edit functionality works within modal"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Fix global search dropdown",
+    "status": "pending",
+    "priority": "high",
+    "files": [
+      "templates/partials/header.twig",
+      "public/js/search.js",
+      "api/search.php",
+      "api/patients.php",
+      "api/owners.php"
+    ],
+    "description": "Make search dropdown responsive, wide, and open patient modal when clicked. Results should show both patients and owners.",
+    "acceptance_criteria": [
+      "Search dropdown spans full width",
+      "Results show patients and owners separately",
+      "Clicking patient opens modal",
+      "Clicking owner navigates to owner page",
+      "Real-time search with debouncing",
+      "Clear search button works"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Fix document upload",
+    "status": "pending",
+    "priority": "high",
+    "files": [
+      "api/documents.php",
+      "includes/db.php",
+      "public/uploads/documents/"
+    ],
+    "description": "Ensure uploaded_by uses session user_id and file saves under correct patient. File permissions and storage must be secure.",
+    "acceptance_criteria": [
+      "Files upload successfully",
+      "uploaded_by field populated from session",
+      "Files associated with correct patient",
+      "File size limits enforced",
+      "Only allowed file types accepted",
+      "Files stored securely with unique names"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Fix footer layout",
+    "status": "pending",
+    "priority": "medium",
+    "files": [
+      "templates/layouts/base.twig",
+      "templates/partials/footer.twig"
+    ],
+    "description": "Footer must stay below content (no flex overlap). Should be centered and responsive.",
+    "acceptance_criteria": [
+      "Footer stays at bottom of content",
+      "No overlap with main content",
+      "Responsive on all screen sizes",
+      "Copyright text centered"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Enable charts & stats",
+    "status": "pending",
+    "priority": "high",
+    "files": [
+      "public/js/charts.js",
+      "api/stats.php",
+      "api/invoices.php",
+      "templates/pages/dashboard.twig"
+    ],
+    "description": "Connect Chart.js to real invoice data and show revenue per week/month. Dashboard should display meaningful KPIs.",
+    "acceptance_criteria": [
+      "Charts display real data from database",
+      "Weekly revenue chart works",
+      "Monthly revenue chart works",
+      "KPI cards show correct values",
+      "Charts are responsive",
+      "Data updates in real-time"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Complete invoice management",
+    "status": "pending",
+    "priority": "high",
+    "files": [
+      "api/invoices.php",
+      "templates/pages/invoices.twig",
+      "public/invoices.php"
+    ],
+    "description": "Implement full invoice CRUD with automatic numbering, status tracking, and PDF export.",
+    "acceptance_criteria": [
+      "Invoice creation with auto-numbering",
+      "Status tracking (draft, sent, paid, overdue)",
+      "Link to patient and owner",
+      "PDF export functionality",
+      "Payment recording",
+      "Invoice listing with filters"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Implement appointment calendar",
+    "status": "pending",
+    "priority": "medium",
+    "files": [
+      "api/appointments.php",
+      "templates/pages/appointments.twig",
+      "public/appointments.php",
+      "public/js/calendar.js"
+    ],
+    "description": "Create functional calendar view for appointments with drag-drop rescheduling.",
+    "acceptance_criteria": [
+      "Calendar view displays appointments",
+      "List view as alternative",
+      "Create new appointments",
+      "Edit existing appointments",
+      "Drag-drop to reschedule",
+      "Status management"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Add treatment templates",
+    "status": "pending",
+    "priority": "low",
+    "files": [
+      "api/treatments.php",
+      "templates/pages/treatments.twig",
+      "migrations/005_treatment_templates.sql"
+    ],
+    "description": "Create template system for common treatments to speed up data entry.",
+    "acceptance_criteria": [
+      "Template creation and management",
+      "Apply template to new treatment",
+      "Customize template values",
+      "Template categories"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Implement backup system",
+    "status": "pending",
+    "priority": "medium",
+    "files": [
+      "api/backup.php",
+      "includes/backup.php",
+      "backups/"
+    ],
+    "description": "Automatic and manual backup system for database and uploaded files.",
+    "acceptance_criteria": [
+      "Manual backup trigger",
+      "Scheduled automatic backups",
+      "Restore functionality",
+      "Backup retention policy",
+      "Download backup files"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Add user role management",
+    "status": "pending",
+    "priority": "medium",
+    "files": [
+      "api/users.php",
+      "includes/Auth.php",
+      "templates/pages/admin.twig",
+      "public/admin.php"
+    ],
+    "description": "Implement role-based access control with admin, therapist, and assistant roles.",
+    "acceptance_criteria": [
+      "User creation with roles",
+      "Permission checking",
+      "Role-based menu items",
+      "Access restrictions enforced",
+      "User management interface"
+    ]
+  },
+  {
+    "id": 11,
+    "title": "Mobile responsive optimization",
+    "status": "pending",
+    "priority": "medium",
+    "files": [
+      "templates/layouts/base.twig",
+      "templates/pages/*.twig",
+      "public/css/main.css"
+    ],
+    "description": "Ensure all pages are fully responsive and usable on mobile devices.",
+    "acceptance_criteria": [
+      "Navigation menu mobile-friendly",
+      "Tables responsive or card view",
+      "Modals work on mobile",
+      "Touch interactions smooth",
+      "Forms usable on mobile"
+    ]
+  },
+  {
+    "id": 12,
+    "title": "Add email notifications",
+    "status": "pending",
+    "priority": "low",
+    "files": [
+      "includes/mailer.php",
+      "api/notifications.php",
+      "templates/emails/"
+    ],
+    "description": "Email notifications for appointments, invoices, and reminders.",
+    "acceptance_criteria": [
+      "Appointment reminders",
+      "Invoice sending",
+      "Payment confirmations",
+      "Email templates",
+      "Notification preferences"
+    ]
+  },
+  {
+    "id": 13,
+    "title": "Implement data export",
+    "status": "pending",
+    "priority": "low",
+    "files": [
+      "api/export.php",
+      "includes/export.php"
+    ],
+    "description": "Export functionality for patients, treatments, and financial data.",
+    "acceptance_criteria": [
+      "Export to CSV",
+      "Export to Excel",
+      "Export to PDF reports",
+      "Selective data export",
+      "GDPR compliance"
+    ]
+  },
+  {
+    "id": 14,
+    "title": "Add activity logging",
+    "status": "pending",
+    "priority": "low",
+    "files": [
+      "includes/logger.php",
+      "logs/activity.log",
+      "migrations/006_activity_log.sql"
+    ],
+    "description": "Comprehensive activity logging for audit trail and debugging.",
+    "acceptance_criteria": [
+      "Log all CRUD operations",
+      "User action tracking",
+      "Error logging",
+      "Log viewer interface",
+      "Log retention policy"
+    ]
+  },
+  {
+    "id": 15,
+    "title": "Performance optimization",
+    "status": "pending",
+    "priority": "low",
+    "files": [
+      "includes/cache.php",
+      "api/_bootstrap.php",
+      "public/js/app.js"
+    ],
+    "description": "Optimize database queries, implement caching, and improve frontend performance.",
+    "acceptance_criteria": [
+      "Database query optimization",
+      "Implement query caching",
+      "Lazy loading for images",
+      "JavaScript bundling",
+      "Page load time < 2s"
+    ]
+  }
+]
