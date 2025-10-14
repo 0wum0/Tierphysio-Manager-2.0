@@ -375,39 +375,50 @@
     </div>
 
     <!-- Patient Detail Modal -->
-    <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" x-cloak>
-        <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="open=false"></div>
+    <div x-data="patientModal()" x-init="init()" x-show="open" 
+         class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" 
+         x-cloak>
         
         <!-- Modal Content -->
         <div id="patientModalBox"
-             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative z-10"
+             class="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden"
+             @click.away="open=false"
              x-transition.scale.origin.center>
-            <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-purple-400 text-2xl">&times;</button>
             
-            <template x-if="patient">
-                <div>
-                    <h2 class="text-2xl font-semibold text-purple-600 dark:text-purple-400" x-text="patient.name"></h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Besitzer: <span x-text="patient.owner_full_name"></span></p>
+            <!-- Modal Header -->
+            <header class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-white">🐾 Patientenakte</h2>
+                <button @click="open=false" class="text-gray-400 hover:text-white text-2xl">✕</button>
+            </header>
+            
+            <!-- Modal Body with fixed height and scroll -->
+            <div class="h-[70vh] flex flex-col">
+                <template x-if="patient">
+                    <div class="flex flex-col h-full">
+                        <!-- Patient Info Header -->
+                        <div class="px-6 py-4 border-b border-slate-700">
+                            <h2 class="text-2xl font-semibold text-purple-400" x-text="patient.name"></h2>
+                            <p class="text-sm text-gray-400">Besitzer: <span x-text="patient.owner_full_name"></span></p>
+                        </div>
 
-                    <!-- TABS NAVIGATION -->
-                    <div class="flex border-b border-gray-600 dark:border-gray-700 mt-4">
-                        <button :class="tab==='info' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
-                                class="px-4 py-2 transition-colors" 
-                                @click="tab='info'">Info</button>
-                        <button :class="tab==='befunde' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
-                                class="px-4 py-2 transition-colors" 
-                                @click="tab='befunde'">Befunde</button>
-                        <button :class="tab==='notizen' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
-                                class="px-4 py-2 transition-colors" 
-                                @click="tab='notizen'">Notizen</button>
-                        <button :class="tab==='dokumente' ? 'border-b-2 border-purple-500 text-purple-500' : 'text-gray-400 hover:text-gray-300'" 
-                                class="px-4 py-2 transition-colors" 
-                                @click="tab='dokumente'; loadDocuments()">📄 Dokumente</button>
-                    </div>
+                        <!-- TABS NAVIGATION -->
+                        <div class="flex border-b border-slate-700 px-6">
+                            <button :class="tab==='info' ? 'border-b-2 border-purple-500 text-purple-400' : 'text-gray-400 hover:text-gray-300'" 
+                                    class="px-4 py-2 transition-colors" 
+                                    @click="tab='info'">Info</button>
+                            <button :class="tab==='befunde' ? 'border-b-2 border-purple-500 text-purple-400' : 'text-gray-400 hover:text-gray-300'" 
+                                    class="px-4 py-2 transition-colors" 
+                                    @click="tab='befunde'">Befunde</button>
+                            <button :class="tab==='notizen' ? 'border-b-2 border-purple-500 text-purple-400' : 'text-gray-400 hover:text-gray-300'" 
+                                    class="px-4 py-2 transition-colors" 
+                                    @click="tab='notizen'">Notizen</button>
+                            <button :class="tab==='dokumente' ? 'border-b-2 border-purple-500 text-purple-400' : 'text-gray-400 hover:text-gray-300'" 
+                                    class="px-4 py-2 transition-colors" 
+                                    @click="tab='dokumente'; loadDocuments()">📄 Dokumente</button>
+                        </div>
 
-                    <!-- TAB CONTENT -->
-                    <div class="mt-4">
+                        <!-- TAB CONTENT - Scrollable Area -->
+                        <div class="flex-1 overflow-y-auto p-6 space-y-4">
                         <!-- INFO TAB -->
                         <div x-show="tab==='info'" x-transition>
                             <ul class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
@@ -535,8 +546,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </template>
+                </template>
+            </div>
         </div>
     </div>
 </div>
