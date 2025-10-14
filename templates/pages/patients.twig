@@ -149,16 +149,13 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 overflow-y-auto" 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" 
          style="display: none;">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Backdrop -->
-            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
-            </div>
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeModal()"></div>
 
-            <!-- Modal Panel -->
-            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <!-- Modal Panel -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg text-left shadow-xl transform transition-all max-w-4xl w-full max-h-[90vh] overflow-y-auto relative z-10">
                 <form @submit.prevent="savePatient()" id="patientForm">
                     <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-6" x-text="modalTitle"></h3>
@@ -404,9 +401,13 @@
     </div>
 
     <!-- Patient Detail Modal -->
-    <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" x-cloak>
+    <div x-data="patientModal()" x-init="init()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" x-cloak>
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="open=false"></div>
+        
+        <!-- Modal Content -->
         <div id="patientModalBox"
-             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative"
+             class="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative z-10"
              x-transition.scale.origin.center>
             <button @click="open=false" class="absolute top-3 right-4 text-gray-400 hover:text-purple-400 text-2xl">&times;</button>
             
