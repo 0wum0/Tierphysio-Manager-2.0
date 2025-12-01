@@ -30,7 +30,7 @@ try {
             ':house_number' => $data['house_number'] ?? '',
             ':postal_code' => $data['postal_code'] ?? '',
             ':city' => $data['city'] ?? '',
-            ':created_by' => $_SESSION['user_id'] ?? null
+            ':created_by' => (session_status() === PHP_SESSION_ACTIVE ? ($_SESSION['user_id'] ?? null) : null)
         ]);
         $newId = $pdo->lastInsertId();
         $stmt = $pdo->prepare("SELECT * FROM tp_owners WHERE id = ?");

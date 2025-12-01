@@ -24,7 +24,7 @@ class Database {
         // Check if config file exists
         if (!file_exists(__DIR__ . '/config.php')) {
             // Redirect to installer if not configured
-            if (!strpos($_SERVER['REQUEST_URI'], 'installer') !== false) {
+            if (strpos($_SERVER['REQUEST_URI'] ?? '', 'installer') === false) {
                 header('Location: /installer/');
                 exit;
             }
