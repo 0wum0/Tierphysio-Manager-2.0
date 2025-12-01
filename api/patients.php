@@ -52,6 +52,10 @@ try {
 switch ($action) {
     case 'list':
         try {
+            $ownerNameField = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "COALESCE(o.first_name || ' ' || o.last_name, '')" 
+                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
+            
             $sql = "
                 SELECT 
                     p.id,
@@ -59,7 +63,7 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    COALESCE(CONCAT(o.first_name, ' ', o.last_name), '') AS owner_full_name,
+                    $ownerNameField AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
@@ -105,6 +109,10 @@ switch ($action) {
         try {
             $keyword = trim($_GET['q'] ?? '');
             
+            $ownerNameField = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "COALESCE(o.first_name || ' ' || o.last_name, '')" 
+                : "COALESCE(CONCAT(o.first_name, ' ', o.last_name), '')";
+            
             $sql = "
                 SELECT 
                     p.id,
@@ -112,7 +120,7 @@ switch ($action) {
                     p.species,
                     p.image,
                     p.is_active,
-                    COALESCE(CONCAT(o.first_name, ' ', o.last_name), '') AS owner_full_name,
+                    $ownerNameField AS owner_full_name,
                     (SELECT MIN(a.appointment_date)
                        FROM tp_appointments a
                        WHERE a.patient_id = p.id
@@ -171,10 +179,18 @@ switch ($action) {
                 api_error('Patient ID fehlt');
             }
             
-            // SQLite-compatible query
+            // Database-compatible query
+            $ownerNameField = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "o.first_name || ' ' || o.last_name" 
+                : "CONCAT(o.first_name, ' ', o.last_name)";
+            
+            $dateFunction = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "date('now')" 
+                : "CURDATE()";
+            
             $sql = "
                 SELECT p.*, 
-                    o.first_name || ' ' || o.last_name AS owner_full_name,
+                    $ownerNameField AS owner_full_name,
                     o.customer_number,
                     o.first_name AS owner_first_name,
                     o.last_name AS owner_last_name,
@@ -188,7 +204,7 @@ switch ($action) {
                     (SELECT MIN(a.appointment_date)
                      FROM tp_appointments a 
                      WHERE a.patient_id = p.id 
-                     AND a.appointment_date >= date('now')
+                     AND a.appointment_date >= $dateFunction
                      AND a.status IN ('scheduled','confirmed')) AS next_appointment,
                     (SELECT CASE 
                         WHEN COUNT(*) > 0 THEN 'open' 
@@ -350,9 +366,13 @@ switch ($action) {
                 $pdo->commit();
                 
                 // Get created patient with owner info
+                $ownerNameField = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                    ? "COALESCE(o.first_name || ' ' || o.last_name, '')" 
+                    : "CONCAT_WS(' ', o.first_name, o.last_name)";
+                
                 $stmt = $pdo->prepare("
                     SELECT p.*, 
-                        CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name,
+                        $ownerNameField AS owner_full_name,
                         o.customer_number, o.email AS owner_email
                     FROM tp_patients p
                     LEFT JOIN tp_owners o ON p.owner_id = o.id
@@ -430,9 +450,13 @@ switch ($action) {
             ]);
             
             // Get updated patient
+            $ownerNameField = (defined('DB_TYPE') && DB_TYPE === 'sqlite') 
+                ? "COALESCE(o.first_name || ' ' || o.last_name, '')" 
+                : "CONCAT_WS(' ', o.first_name, o.last_name)";
+            
             $stmt = $pdo->prepare("
                 SELECT p.*, 
-                    CONCAT_WS(' ', o.first_name, o.last_name) AS owner_full_name
+                    $ownerNameField AS owner_full_name
                 FROM tp_patients p
                 LEFT JOIN tp_owners o ON p.owner_id = o.id
                 WHERE p.id = ?
@@ -530,7 +554,9 @@ switch ($action) {
             }
             
             // Get user ID from session or use default
-            session_start();
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
             $user_id = $_SESSION['user_id'] ?? 1;
             
             $stmt = $pdo->prepare("
@@ -562,7 +588,9 @@ switch ($action) {
             }
             
             // Get user ID from session or use default
-            session_start();
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
             $user_id = $_SESSION['user_id'] ?? 1;
             
             $stmt = $pdo->prepare("

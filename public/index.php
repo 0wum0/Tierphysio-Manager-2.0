@@ -51,11 +51,13 @@ try {
     $stats['open_invoices_amount'] = $openInvoices['total'] ?? 0;
     
     // This month's revenue
+    // Use database-agnostic date comparison
+    $currentMonth = date('Y-m');
     $monthRevenue = $db->query(
         "SELECT SUM(paid_amount) as revenue 
          FROM tp_invoices 
-         WHERE MONTH(payment_date) = MONTH(CURRENT_DATE()) 
-         AND YEAR(payment_date) = YEAR(CURRENT_DATE())"
+         WHERE DATE_FORMAT(payment_date, '%Y-%m') = :current_month",
+        ['current_month' => $currentMonth]
     )->fetch();
     $stats['month_revenue'] = $monthRevenue['revenue'] ?? 0;
     
