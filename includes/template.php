@@ -5,7 +5,7 @@
  */
 
 // Include Twig via vendor autoload (for Twig only)
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/autoload.php';
 
 use Twig\Loader\FilesystemLoader;
 use Twig\Environment;
@@ -139,7 +139,7 @@ function render_template($path, $data = []) {
         // Render template
         echo $twig->render($path, $data);
         
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         // In development, show error
         if (defined('APP_DEBUG') && APP_DEBUG) {
             echo '<pre style="color: red; background: #fff; padding: 20px; border: 2px solid red;">';
