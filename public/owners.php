@@ -5,7 +5,7 @@
  */
 
 // Load composer autoloader for dependencies
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/autoload.php';
 
 // Load configuration and helpers
 require_once __DIR__ . '/../includes/config.php';
