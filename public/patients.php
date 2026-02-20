@@ -9,30 +9,7 @@
 
 declare(strict_types=1);
 
-/**
- * Robust autoload resolver (weil dein Projekt teils Root vs public hat)
- */
-$autoloadCandidates = [
-    __DIR__ . '/vendor/autoload.php',
-    __DIR__ . '/../vendor/autoload.php',
-    __DIR__ . '/../../vendor/autoload.php',
-];
-
-$autoloadPath = null;
-foreach ($autoloadCandidates as $p) {
-    if (is_file($p)) {
-        $autoloadPath = $p;
-        break;
-    }
-}
-
-if (!$autoloadPath) {
-    http_response_code(500);
-    echo "Autoload nicht gefunden. Bitte prüfen: vendor/autoload.php (Root/Public Pfadproblem).";
-    exit;
-}
-
-require_once $autoloadPath;
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // version.php ebenfalls robust suchen
 $versionCandidates = [
