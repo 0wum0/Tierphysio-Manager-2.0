@@ -114,7 +114,6 @@ try {
             $species = trim((string)($_GET['species'] ?? ''));
             $where = [];
             $params = [];
-
             if ($q !== '') {
                 $where[] = '(p.name LIKE ? OR p.microchip LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ?)';
                 $like = '%' . $q . '%';

@@ -5,7 +5,7 @@
  */
 
 // Include Twig via vendor autoload (for Twig only)
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/autoload.php';
 
 use Twig\Loader\FilesystemLoader;
 use Twig\Environment;

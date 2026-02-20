@@ -4,7 +4,7 @@
  * Login Page
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/autoload.php';
 require_once __DIR__ . '/../includes/version.php';
 
 use TierphysioManager\Auth;
