@@ -1,97 +1,42 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Patients Management Page (Modal-first)
- *
- * - action=view&id=XX wird NICHT mehr als eigene Seite gerendert
- * - stattdessen wird die Liste geladen und das Modal automatisch geöffnet
+ * Patients Management Page
  */
 
-declare(strict_types=1);
-
-/**
- * Robust autoload resolver (weil dein Projekt teils Root vs public hat)
- */
-$autoloadCandidates = [
-    __DIR__ . '/vendor/autoload.php',
-    __DIR__ . '/../vendor/autoload.php',
-    __DIR__ . '/../../vendor/autoload.php',
-];
-
-$autoloadPath = null;
-foreach ($autoloadCandidates as $p) {
-    if (is_file($p)) {
-        $autoloadPath = $p;
-        break;
-    }
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-if (!$autoloadPath) {
-    http_response_code(500);
-    echo "Autoload nicht gefunden. Bitte prüfen: vendor/autoload.php (Root/Public Pfadproblem).";
+// Include template functions
+require_once __DIR__ . '/../includes/template.php';
+
+// Check if user is logged in
+$user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
+
+// Basic permission check
+if (!$user) {
+    header('Location: /public/login.php');
     exit;
 }
 
-require_once $autoloadPath;
-
-// version.php ebenfalls robust suchen
-$versionCandidates = [
-    __DIR__ . '/includes/version.php',
-    __DIR__ . '/../includes/version.php',
-    __DIR__ . '/../../includes/version.php',
-];
-foreach ($versionCandidates as $p) {
-    if (is_file($p)) {
-        require_once $p;
-        break;
-    }
-}
-
-use TierphysioManager\Auth;
-use TierphysioManager\Database;
-use TierphysioManager\Template;
-
-// Initialize services
-$auth = Auth::getInstance();
-$db = Database::getInstance();
-$template = Template::getInstance();
-
-// Require login + permission
-$auth->requireLogin();
-$auth->requirePermission('view_patients');
-
-// action + id
+// Get action
 $action = $_GET['action'] ?? 'list';
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$id = $_GET['id'] ?? null;
 
-/**
- * IMPORTANT:
- * Früher: action=view => patient_detail.twig (komische Seite)
- * Jetzt: action=view => Liste laden + Modal öffnen
- */
-$openPatientId = null;
-if ($action === 'view' && $id > 0) {
-    $openPatientId = $id;
-    $action = 'list';
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Form submissions are handled by the API now
+    // This page is just for displaying the interface
 }
 
-// Optional: CSRF Token für deine JS FormData (wenn du ihn im Layout als meta setzt)
-$csrfToken = null;
-try {
-    // Wenn Auth so eine Methode hat – falls nicht, bleibt es null
-    if (method_exists($auth, 'getCSRFToken')) {
-        $csrfToken = $auth->getCSRFToken();
-    }
-} catch (Throwable $e) {
-    $csrfToken = null;
-}
-
-// Data for template
+// Prepare data for the template
 $data = [
     'action' => $action,
-    'open_patient_id' => $openPatientId, // <- wird in Twig genutzt um Modal automatisch zu öffnen
-    'csrf_token' => $csrfToken,
+    'user' => $user
 ];
 
-// Render ALWAYS the patients list page (modal-first)
-$template->display('pages/patients.twig', $data);
+// Render the patients page template
+// All data loading is done via JavaScript/AJAX
+render_template('pages/patients.twig', $data);
