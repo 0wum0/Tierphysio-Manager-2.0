@@ -1,0 +1,451 @@
+/* public/css/patients.css
+ * Tierphysio Manager – Patients UI + Patient Record Modal + Timeline
+ * Ziel: Light Theme sauber, Timeline wie Notes-Cards, Buttons/Chips sichtbar
+ */
+
+:root{
+  --tp-bg: #ffffff;
+  --tp-panel: #ffffff;
+  --tp-muted: #6b7280;       /* gray-500 */
+  --tp-text: #111827;        /* gray-900 */
+  --tp-border: #e5e7eb;      /* gray-200 */
+  --tp-border2: #d1d5db;     /* gray-300 */
+  --tp-soft: #f9fafb;        /* gray-50 */
+  --tp-soft2: #f3f4f6;       /* gray-100 */
+  --tp-shadow: 0 10px 30px rgba(17,24,39,0.10);
+
+  --tp-radius-xl: 18px;
+  --tp-radius-lg: 14px;
+  --tp-radius-md: 12px;
+
+  --tp-accent: #7c3aed; /* purple-600 */
+  --tp-accent2: #4f46e5; /* indigo-600 */
+
+  --tp-green: #16a34a;
+  --tp-blue: #2563eb;
+  --tp-orange: #ea580c;
+  --tp-yellow: #ca8a04;
+  --tp-red: #dc2626;
+  --tp-gray: #6b7280;
+}
+
+/* -----------------------------
+   Modal Overlay basics
+------------------------------ */
+.tp-modal-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px 14px;
+  overflow: auto;
+}
+
+.tp-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(17,24,39,0.55);
+  backdrop-filter: blur(6px);
+}
+
+/* Modal panel (light by default) */
+.tp-modal-panel{
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-border);
+  border-radius: 22px;
+  box-shadow: var(--tp-shadow);
+  overflow: hidden;
+}
+
+/* Close button */
+.tp-modal-panel > button,
+.tp-modal-panel .tp-close{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* -----------------------------
+   Force Light inside patient record modal
+   (weil du in Twig noch einige dark/text-gray-200 Klassen drin hast)
+------------------------------ */
+.tp-patient-modal{
+  color: var(--tp-text);
+}
+
+.tp-patient-modal *{
+  color: inherit;
+}
+
+/* Tailwind utility overrides (nur im Patient-Modal!) */
+.tp-patient-modal .text-gray-200,
+.tp-patient-modal .text-gray-300,
+.tp-patient-modal .text-gray-400,
+.tp-patient-modal .text-gray-500{
+  color: var(--tp-muted) !important;
+}
+.tp-patient-modal .text-gray-700,
+.tp-patient-modal .text-gray-800,
+.tp-patient-modal .text-gray-900{
+  color: var(--tp-text) !important;
+}
+.tp-patient-modal .text-purple-300,
+.tp-patient-modal .text-purple-400,
+.tp-patient-modal .text-purple-600{
+  color: var(--tp-accent) !important;
+}
+
+/* -----------------------------
+   Info boxes (Tierdaten/Besitzerdaten)
+------------------------------ */
+.tp-patient-modal .rounded-2xl.border{
+  border-color: var(--tp-border) !important;
+}
+
+.tp-patient-modal .bg-white\/5,
+.tp-patient-modal .bg-black\/20{
+  background: var(--tp-soft) !important;
+}
+
+/* Grid text readable */
+.tp-patient-modal .grid.text-sm span{
+  line-height: 1.35;
+}
+
+/* -----------------------------
+   Health pill
+------------------------------ */
+.tp-health-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--tp-border);
+  background: rgba(255,255,255,0.75);
+  box-shadow: 0 8px 20px rgba(17,24,39,0.08);
+}
+
+.tp-health-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--tp-green);
+  box-shadow: 0 0 0 4px rgba(22,163,74,0.18);
+}
+.tp-health-dot.vg{ background: var(--tp-green); box-shadow: 0 0 0 4px rgba(22,163,74,0.18); }
+.tp-health-dot.g{ background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.18); }
+.tp-health-dot.ok{ background: var(--tp-yellow); box-shadow: 0 0 0 4px rgba(202,138,4,0.18); }
+.tp-health-dot.b{ background: var(--tp-orange); box-shadow: 0 0 0 4px rgba(234,88,12,0.18); }
+.tp-health-dot.c{ background: var(--tp-red); box-shadow: 0 0 0 4px rgba(220,38,38,0.18); }
+
+.tp-health-pill select{
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-weight: 700;
+  color: var(--tp-text);
+  cursor: pointer;
+}
+
+/* -----------------------------
+   Timeline wrapper like Notes-Cards container
+------------------------------ */
+.tp-timeline-wrap{
+  background: var(--tp-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius-xl);
+}
+
+.tp-timeline-toolbar{
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 420px);
+  gap: 14px;
+  align-items: center;
+}
+
+@media (max-width: 860px){
+  .tp-timeline-toolbar{
+    grid-template-columns: 1fr;
+  }
+}
+
+.tp-timeline-search input{
+  width: 100%;
+  border: 1px solid var(--tp-border);
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+.tp-timeline-search input:focus{
+  border-color: rgba(124,58,237,0.45);
+  box-shadow: 0 0 0 4px rgba(124,58,237,0.10);
+}
+
+/* -----------------------------
+   Timeline cards (the missing part!)
+------------------------------ */
+.tp-timeline-card{
+  background: #fff;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius-xl);
+  padding: 14px 14px 12px 14px;
+  margin: 10px 0;
+  box-shadow: 0 10px 24px rgba(17,24,39,0.06);
+  position: relative;
+}
+
+.tp-timeline-card::before{
+  content:"";
+  position:absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 999px;
+  background: rgba(124,58,237,0.35);
+}
+
+.tp-timeline-head{
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.tp-timeline-icon{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(124,58,237,0.10);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex: 0 0 36px;
+  margin-left: 6px; /* Platz wegen linker Leiste */
+}
+
+.tp-timeline-meta .fw-bold{
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--tp-text);
+  line-height: 1.2;
+}
+
+.tp-timeline-meta .small.text-muted{
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--tp-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tp-timeline-content{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tp-border);
+  color: var(--tp-text);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* -----------------------------
+   Buttons – weil sie bei dir wie Text aussehen
+------------------------------ */
+.tp-patient-modal button,
+.tp-patient-modal .btn{
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tp-patient-modal .tp-mini-btn,
+.tp-patient-modal .btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--tp-border);
+  background: #fff;
+  color: var(--tp-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tp-patient-modal .btn:hover,
+.tp-patient-modal .tp-mini-btn:hover{
+  background: var(--tp-soft2);
+}
+
+.tp-patient-modal .btn-primary{
+  background: linear-gradient(90deg, rgba(124,58,237,0.95), rgba(79,70,229,0.95));
+  border-color: rgba(124,58,237,0.35);
+  color: #fff;
+}
+.tp-patient-modal .btn-primary:hover{
+  filter: brightness(1.02);
+}
+
+.tp-patient-modal .btn-outline-light{
+  background: #fff;
+  border-color: var(--tp-border);
+  color: var(--tp-text);
+}
+
+.tp-patient-modal .btn-outline-danger{
+  background: rgba(220,38,38,0.06);
+  border-color: rgba(220,38,38,0.22);
+  color: var(--tp-red);
+}
+.tp-patient-modal .btn-outline-danger:hover{
+  background: rgba(220,38,38,0.10);
+}
+
+/* -----------------------------
+   Chips / Tags
+------------------------------ */
+.tp-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid var(--tp-border);
+  background: var(--tp-soft);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tp-text);
+}
+
+.tp-chip .dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--tp-gray);
+}
+
+/* Color variants used by JS (tp-green/tp-blue/...) */
+.tp-chip.tp-green{ background: rgba(22,163,74,0.10); border-color: rgba(22,163,74,0.25); }
+.tp-chip.tp-green .dot{ background: var(--tp-green); }
+
+.tp-chip.tp-blue{ background: rgba(37,99,235,0.10); border-color: rgba(37,99,235,0.25); }
+.tp-chip.tp-blue .dot{ background: var(--tp-blue); }
+
+.tp-chip.tp-purple{ background: rgba(124,58,237,0.10); border-color: rgba(124,58,237,0.25); }
+.tp-chip.tp-purple .dot{ background: var(--tp-accent); }
+
+.tp-chip.tp-orange{ background: rgba(234,88,12,0.10); border-color: rgba(234,88,12,0.25); }
+.tp-chip.tp-orange .dot{ background: var(--tp-orange); }
+
+.tp-chip.tp-yellow{ background: rgba(202,138,4,0.10); border-color: rgba(202,138,4,0.25); }
+.tp-chip.tp-yellow .dot{ background: var(--tp-yellow); }
+
+.tp-chip.tp-red{ background: rgba(220,38,38,0.10); border-color: rgba(220,38,38,0.25); }
+.tp-chip.tp-red .dot{ background: var(--tp-red); }
+
+.tp-chip.tp-gray{ background: rgba(107,114,128,0.08); border-color: rgba(107,114,128,0.20); }
+.tp-chip.tp-gray .dot{ background: var(--tp-gray); }
+
+/* Price badge from JS: <span class="badge bg-dark">75 €</span> */
+.tp-patient-modal .badge.bg-dark{
+  background: rgba(17,24,39,0.06) !important;
+  border: 1px solid var(--tp-border) !important;
+  color: var(--tp-text) !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+/* -----------------------------
+   Inline form (JS generates bootstrap-like markup)
+------------------------------ */
+.tp-inline-form{
+  background: #fff;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius-xl);
+  padding: 14px;
+  box-shadow: 0 10px 24px rgba(17,24,39,0.06);
+  margin-top: 10px;
+}
+
+.tp-divider{
+  height: 1px;
+  background: var(--tp-border);
+  margin: 12px 0;
+}
+
+/* Minimal bootstrap-ish helpers because JS uses those classes */
+.tp-patient-modal .d-flex{ display:flex; }
+.tp-patient-modal .gap-1{ gap: 6px; }
+.tp-patient-modal .gap-2{ gap: 10px; }
+.tp-patient-modal .align-items-center{ align-items:center; }
+.tp-patient-modal .align-items-end{ align-items:flex-end; }
+.tp-patient-modal .justify-content-between{ justify-content:space-between; }
+.tp-patient-modal .justify-content-end{ justify-content:flex-end; }
+.tp-patient-modal .flex-wrap{ flex-wrap:wrap; }
+.tp-patient-modal .flex-grow-1{ flex: 1 1 auto; }
+
+.tp-patient-modal .row{ display:flex; flex-wrap:wrap; gap: 10px; }
+.tp-patient-modal .col-12{ flex: 0 0 100%; }
+.tp-patient-modal .col-md-4{ flex: 1 1 240px; }
+.tp-patient-modal .col-md-6{ flex: 1 1 320px; }
+.tp-patient-modal .col-md-8{ flex: 2 1 420px; }
+
+.tp-patient-modal label.small{
+  display:block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tp-muted);
+  margin-bottom: 6px;
+}
+
+.tp-patient-modal .form-control,
+.tp-patient-modal .form-select{
+  width: 100%;
+  border: 1px solid var(--tp-border);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  font-size: 14px;
+  color: var(--tp-text);
+}
+.tp-patient-modal .form-control:focus,
+.tp-patient-modal .form-select:focus{
+  border-color: rgba(124,58,237,0.45);
+  box-shadow: 0 0 0 4px rgba(124,58,237,0.10);
+}
+
+.tp-patient-modal .form-control-sm,
+.tp-patient-modal .form-select-sm{
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+
+/* -----------------------------
+   Dark mode optional (falls du doch mal brauchst) – sehr dezent
+------------------------------ */
+.dark .tp-modal-panel{
+  background: #0b0f17;
+  border-color: rgba(255,255,255,0.08);
+}
+.dark .tp-timeline-wrap{ background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+.dark .tp-timeline-card{ background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); }
+.dark .tp-inline-form{ background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); }
+.dark .tp-patient-modal .form-control,
+.dark .tp-patient-modal .form-select{ background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.10); color: #f3f4f6; }
+.dark .tp-patient-modal .btn,
+.dark .tp-patient-modal .tp-mini-btn{ background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.10); color: #f3f4f6; }

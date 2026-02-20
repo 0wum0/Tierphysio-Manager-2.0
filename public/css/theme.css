@@ -1,0 +1,152 @@
+/* Datei: public/css/theme.css
+ * Tierphysio Manager – Globales Erscheinungsbild (Light/Dark + UI-Basics)
+ * Ausgelagert aus: templates/layouts/base.twig (+ kleine globale Utilities)
+ *
+ * WICHTIG:
+ * - DarkMode wird über die Klasse "dark" am <html> getoggelt (Tailwind darkMode: 'class')
+ * - Keine festen "immer-dunkel" Container-Backgrounds erzwingen (das kommt über Tailwind-Klassen)
+ */
+
+/* Prevent unwanted scrolling behavior */
+html, body{
+  scroll-behavior:smooth;
+  overflow-x:hidden;
+  margin:0;
+  padding:0;
+  width:100%;
+  max-width:100vw;
+}
+
+/* Box-sizing reset for better width control */
+*, *::before, *::after{ box-sizing:border-box; }
+
+/* Font fallbacks (die Hauptfonts kommen über Google Fonts + Tailwind config) */
+body{
+  font-family:'Inter', system-ui, -apple-system, sans-serif;
+}
+h1, h2, h3, h4, h5, h6, .font-heading{
+  font-family:'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Chart container safeguards */
+.chart-container{
+  overflow:hidden;
+  position:relative;
+}
+
+/* Glass Effect */
+.glass{
+  background:rgba(255, 255, 255, 0.10);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255, 255, 255, 0.20);
+}
+.glass-dark{
+  background:rgba(0, 0, 0, 0.30);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Dark Mode Overrides (nur gezielt – Tailwind macht den Rest) */
+html.dark .glass{
+  background:rgba(255, 255, 255, 0.05);
+  border:1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Gradient Background / Text */
+.gradient-bg{
+  background:linear-gradient(135deg, #9b5de5 0%, #7C4DFF 50%, #6c63ff 100%);
+}
+.gradient-text{
+  background:linear-gradient(135deg, #9b5de5, #7C4DFF, #6c63ff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* Loader Animations */
+.loader-paw{
+  animation:paw-pulse 2s ease-in-out infinite;
+}
+@keyframes paw-pulse{
+  0%,100%{ transform:scale(1); opacity:1; }
+  50%{ transform:scale(1.1); opacity:0.8; }
+}
+
+.loader-spinner{
+  border-top-color:#9b5de5;
+  animation:spinner 1.5s linear infinite;
+}
+@keyframes spinner{
+  0%{ transform:rotate(0deg); }
+  100%{ transform:rotate(360deg); }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:rgba(155, 93, 229, 0.10); }
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(135deg, #9b5de5, #7C4DFF);
+  border-radius:5px;
+}
+::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(135deg, #7C4DFF, #6c63ff);
+}
+
+/* === Global Search Dropdown Styling === */
+.animate-fade-in{
+  animation:fadeIn 0.2s ease-in-out forwards;
+}
+@keyframes fadeIn{
+  from{ opacity:0; transform:translateY(-5px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* bessere Schattenkonsistenz (Tailwind shadow-2xl wird manchmal überschrieben) */
+.shadow-2xl{
+  box-shadow:0 10px 30px rgba(0,0,0,0.45);
+}
+
+/* Enhanced blur and glass morphism effects */
+.backdrop-blur-lg{
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.backdrop-blur-md{
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+}
+
+/* Make search input more responsive */
+@media (max-width:768px){
+  .max-w-md{ max-width:100%; }
+  .relative.w-full.max-w-md{ max-width:100%; }
+}
+
+/* Smooth hover transitions for search results (falls Tailwind-escaped Klasse nicht greift) */
+.hover\:bg-indigo-600\/70:hover{
+  background-color:rgba(79, 70, 229, 0.7);
+}
+
+/* Dark mode input styling */
+html.dark input[type="text"],
+html.dark input[type="search"]{
+  color:#e5e7eb;
+}
+html.dark input[type="text"]::placeholder,
+html.dark input[type="search"]::placeholder{
+  color:#9ca3af;
+}
+
+/* Bellshake (Topbar) – global ausgelagert */
+@keyframes bellshake{
+  0%{ transform:rotate(0deg); }
+  15%{ transform:rotate(12deg); }
+  30%{ transform:rotate(-12deg); }
+  45%{ transform:rotate(10deg); }
+  60%{ transform:rotate(-10deg); }
+  75%{ transform:rotate(6deg); }
+  90%{ transform:rotate(-6deg); }
+  100%{ transform:rotate(0deg); }
+}
