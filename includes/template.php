@@ -139,7 +139,7 @@ function render_template($path, $data = []) {
         // Render template
         echo $twig->render($path, $data);
         
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         // In development, show error
         if (defined('APP_DEBUG') && APP_DEBUG) {
             echo '<pre style="color: red; background: #fff; padding: 20px; border: 2px solid red;">';
