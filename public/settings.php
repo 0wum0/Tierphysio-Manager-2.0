@@ -1,8 +1,14 @@
 <?php
 /**
  * Tierphysio Manager 2.0
- * Settings Management Page
+ * Settings Management Page (public)
+ *
+ * Ziel:
+ * - Seite /public/settings.php rendert die Twig-Seite pages/settings.twig (Shell/UI)
+ * - Daten kommen aus /api/settings.php + settings.js / Alpine
  */
+
+declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/version.php';
@@ -13,78 +19,46 @@ use TierphysioManager\Template;
 
 // Initialize services
 $auth = Auth::getInstance();
-$db = Database::getInstance();
+$db = Database::getInstance(); // bewusst geladen wie bei invoices/emails
 $template = Template::getInstance();
 
-// Require login
+// Require login + permission
 $auth->requireLogin();
-$auth->requirePermission('manage_settings');
 
-// Get action
-$action = $_GET['action'] ?? 'list';
-$category = $_GET['category'] ?? 'general';
-
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!$auth->verifyCSRFToken($_POST['_csrf_token'] ?? '')) {
-        Template::setFlash('error', 'Ungültiger Sicherheitstoken.');
-    } else {
-        try {
-            // Update settings
-            foreach ($_POST['settings'] ?? [] as $key => $value) {
-                $stmt = $db->prepare("
-                    UPDATE tp_settings 
-                    SET value = :value, 
-                        updated_by = :updated_by,
-                        updated_at = NOW()
-                    WHERE category = :category 
-                    AND `key` = :key
-                ");
-                
-                $stmt->execute([
-                    'value' => is_array($value) ? json_encode($value) : $value,
-                    'category' => $category,
-                    'key' => $key,
-                    'updated_by' => $auth->getUserId()
-                ]);
-            }
-            
-            Template::setFlash('success', 'Einstellungen erfolgreich gespeichert.');
-            header('Location: /public/settings.php?category=' . $category);
-            exit;
-        } catch (Exception $e) {
-            Template::setFlash('error', 'Fehler beim Speichern: ' . $e->getMessage());
-        }
-    }
+// Permission optional, aber bei dir vorhanden:
+if (method_exists($auth, 'requirePermission')) {
+    $auth->requirePermission('manage_settings');
 }
 
-// Get settings categories
-$categories = $db->query("
-    SELECT DISTINCT category, COUNT(*) as count 
-    FROM tp_settings 
-    WHERE is_system = 0 OR is_system IS NULL
-    GROUP BY category 
-    ORDER BY category
-")->fetchAll();
+// Get current user
+$user = method_exists($auth, 'getUser') ? $auth->getUser() : null;
 
-// Get settings for current category
-$settings = $db->query("
-    SELECT * FROM tp_settings 
-    WHERE category = :category 
-    AND (is_system = 0 OR is_system IS NULL)
-    ORDER BY `key`
-", ['category' => $category])->fetchAll();
+// Get action (falls du später Router-Logik willst)
+$action = (string)($_GET['action'] ?? 'list');
 
-// Prepare template data
+// CSRF
+$csrf = '';
+try {
+    if (method_exists($auth, 'getCSRFToken')) {
+        $csrf = (string)$auth->getCSRFToken();
+    }
+} catch (Throwable $e) {
+    $csrf = '';
+}
+
+// Base data for template
 $data = [
-    'user' => $auth->getUser(),
-    'page_title' => 'Einstellungen',
-    'current_page' => 'settings',
-    'categories' => $categories,
-    'current_category' => $category,
-    'settings' => $settings,
-    'csrf_token' => $auth->getCSRFToken()
+    'page_title'   => 'Einstellungen',
+    'user'         => $user,
+    'action'       => $action,
+    'csrf_token'   => $csrf,
+
+    // Für Sidebar Active-State
+    'current_page' => ['path' => '/public/settings.php'],
+
+    // API Endpoint für settings.js / Alpine
+    'api_url'      => '/api/settings.php',
 ];
 
-// Render template
-$template->render('pages/settings', $data);
+// Render settings shell (Twig)
+$template->display('pages/settings.twig', $data);
