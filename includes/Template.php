@@ -22,6 +22,22 @@ class Template {
     }
 
     public function display(string $template, array $data = []): void {
+        // Ensure templates that depend on a global user (e.g. base layout)
+        // still receive user context even if only user_id is stored in session.
+        if (!array_key_exists('user', $data)) {
+            try {
+                $auth = Auth::getInstance();
+                if (method_exists($auth, 'getUser')) {
+                    $u = $auth->getUser();
+                    if (is_array($u) || is_object($u)) {
+                        $data['user'] = $u;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep rendering without forcing user context
+            }
+        }
+
         require_once __DIR__ . '/template.php';
         render_template($template, $data);
     }
