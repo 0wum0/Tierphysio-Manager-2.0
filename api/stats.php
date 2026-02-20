@@ -1,328 +1,246 @@
 <?php
 /**
- * Stats API
- * Provides system statistics and metrics for admin dashboard
+ * Tierphysio Manager 2.0
+ * API Endpoint: /api/stats.php
+ *
+ * FIX:
+ * - Nutzt DEIN DB-Schema: tp_invoices.total (NICHT total_amount)
+ * - Liefert IMMER JSON (auch bei Fatal Errors)
+ * - Einheitliches Response-Format via api_success/api_error aus _bootstrap.php
+ *
+ * Actions:
+ * - overview (default): KPIs für Dashboard/Rechnungen
+ *   Parameter optional:
+ *   - period=month|quarter|year|all
+ *   - from=YYYY-MM-DD, to=YYYY-MM-DD (überschreibt period)
+ *   - date_from/date_to (Alias)
+ *
+ * Response:
+ * {"ok":true,"status":"success","data":{"items":[{...}] ,"count":1}}
  */
+
+declare(strict_types=1);
+
+@ini_set('display_errors', '0');
+@ini_set('log_errors', '1');
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+
+ob_start();
+
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if (!$err) {
+        if (ob_get_length() !== false) {
+            ob_end_flush();
+        }
+        return;
+    }
+
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (!in_array($err['type'], $fatalTypes, true)) {
+        if (ob_get_length() !== false) {
+            ob_end_flush();
+        }
+        return;
+    }
+
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    error_log("Stats API FATAL: {$err['message']} in {$err['file']}:{$err['line']}");
+
+    echo json_encode([
+        'ok' => false,
+        'status' => 'error',
+        'message' => 'Serverfehler aufgetreten',
+    ], JSON_UNESCAPED_UNICODE);
+
+    exit;
+});
 
 require_once __DIR__ . '/_bootstrap.php';
 
-// Set JSON headers
-header('Content-Type: application/json; charset=UTF-8');
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
 
-// Admin-only endpoint
-if (!$auth->isAdmin()) {
-    http_response_code(403);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Admin-Rechte erforderlich'
-    ]);
-    exit;
+function safe_trim($v): string
+{
+    return trim((string)($v ?? ''));
 }
 
-// Get request method
-$method = $_SERVER['REQUEST_METHOD'];
+function to_float($v): float
+{
+    if ($v === null) return 0.0;
+    if (is_float($v)) return $v;
+    if (is_int($v)) return (float)$v;
+    $s = str_replace(',', '.', (string)$v);
+    return is_numeric($s) ? (float)$s : 0.0;
+}
+
+function period_to_range(string $period): array
+{
+    $period = strtolower(trim($period));
+    $today = new DateTimeImmutable('today');
+
+    if ($period === 'all') {
+        return ['', ''];
+    }
+    if ($period === 'year') {
+        $from = $today->setDate((int)$today->format('Y'), 1, 1);
+        $to = $today->setDate((int)$today->format('Y'), 12, 31);
+        return [$from->format('Y-m-d'), $to->format('Y-m-d')];
+    }
+    if ($period === 'quarter') {
+        $m = (int)$today->format('n');
+        $q = (int)floor(($m - 1) / 3);
+        $startMonth = $q * 3 + 1;
+        $from = $today->setDate((int)$today->format('Y'), $startMonth, 1);
+        $to = $from->modify('+3 months')->modify('-1 day');
+        return [$from->format('Y-m-d'), $to->format('Y-m-d')];
+    }
+
+    // default month
+    $from = $today->setDate((int)$today->format('Y'), (int)$today->format('n'), 1);
+    $to = $from->modify('+1 month')->modify('-1 day');
+    return [$from->format('Y-m-d'), $to->format('Y-m-d')];
+}
+
+function compute_overview(PDO $pdo, string $dateFrom, string $dateTo): array
+{
+    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+
+    // Wir rechnen konsequent auf tp_invoices.total (dein Schema)
+    // "Offen": status in sent, partially_paid, draft (anpassbar)
+    // "Überfällig": due_date < today und status in sent, partially_paid
+    // "Bezahlt (Monat)": status='paid' UND invoice_date im aktuellen Monat (oder optional payment_date)
+    // "Monatsumsatz": alle Rechnungen im aktuellen Monat (egal Status) anhand invoice_date
+
+    $ym = (new DateTimeImmutable('today'))->format('Y-m'); // e.g. 2025-12
+
+    $params = [];
+    $whereRange = '';
+
+    if ($dateFrom !== '' && $dateTo !== '') {
+        $whereRange = " AND invoice_date BETWEEN :from AND :to";
+        $params[':from'] = $dateFrom;
+        $params[':to'] = $dateTo;
+    }
+
+    // 1) Aggregat für geladenen Zeitraum (für deine Overview-Kacheln kann das auch period-basiert sein)
+    $sql = "
+        SELECT
+            COALESCE(SUM(CASE WHEN status IN ('sent','draft','partially_paid') THEN total ELSE 0 END), 0) AS open_amount,
+            COALESCE(SUM(CASE WHEN status IN ('sent','partially_paid') AND due_date < :today THEN total ELSE 0 END), 0) AS overdue_amount,
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0) AS paid_amount_in_range,
+
+            SUM(CASE WHEN status IN ('sent','draft','partially_paid') THEN 1 ELSE 0 END) AS open_count,
+            SUM(CASE WHEN status IN ('sent','partially_paid') AND due_date < :today THEN 1 ELSE 0 END) AS overdue_count,
+            SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count_in_range
+        FROM tp_invoices
+        WHERE 1=1
+        {$whereRange}
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':today', $today);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+    }
+    $stmt->execute();
+    $agg = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    // 2) Monatsumsatz (immer aktueller Monat, unabhängig vom gewählten Zeitraum, wie dein JS es auch macht)
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(total), 0) AS month_revenue_total
+        FROM tp_invoices
+        WHERE invoice_date LIKE :ym
+    ");
+    $stmt->bindValue(':ym', $ym . '%');
+    $stmt->execute();
+    $monthRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['month_revenue_total' => 0];
+
+    // 3) Bezahlt (Monat) – aktueller Monat nach invoice_date
+    $stmt = $pdo->prepare("
+        SELECT
+            COALESCE(SUM(total), 0) AS paid_month_amount,
+            COUNT(*) AS paid_month_count
+        FROM tp_invoices
+        WHERE status = 'paid'
+          AND invoice_date LIKE :ym
+    ");
+    $stmt->bindValue(':ym', $ym . '%');
+    $stmt->execute();
+    $paidMonth = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['paid_month_amount' => 0, 'paid_month_count' => 0];
+
+    return [
+        'monthRevenueTotal' => to_float($monthRow['month_revenue_total'] ?? 0),
+        'openAmount' => to_float($agg['open_amount'] ?? 0),
+        'overdueAmount' => to_float($agg['overdue_amount'] ?? 0),
+        'paidMonthAmount' => to_float($paidMonth['paid_month_amount'] ?? 0),
+
+        'openCount' => (int)($agg['open_count'] ?? 0),
+        'overdueCount' => (int)($agg['overdue_count'] ?? 0),
+        'paidMonthCount' => (int)($paidMonth['paid_month_count'] ?? 0),
+
+        // Debug / Kontext
+        'range' => [
+            'from' => $dateFrom,
+            'to' => $dateTo,
+        ],
+        'today' => $today,
+        'currentMonth' => $ym,
+    ];
+}
+
+// ------------------------------------------------------------
+// Routing
+// ------------------------------------------------------------
+
+$action = $_GET['action'] ?? 'overview';
 
 try {
-    if ($method !== 'GET') {
-        http_response_code(405);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Nur GET-Methode erlaubt'
-        ]);
-        exit;
+    $pdo = get_pdo();
+
+    // Parameter normalisieren
+    $period = safe_trim($_GET['period'] ?? 'month');
+
+    $dateFrom = safe_trim($_GET['from'] ?? '');
+    $dateTo = safe_trim($_GET['to'] ?? '');
+
+    // Aliases
+    if ($dateFrom === '') $dateFrom = safe_trim($_GET['date_from'] ?? '');
+    if ($dateTo === '') $dateTo = safe_trim($_GET['date_to'] ?? '');
+
+    // Wenn nix gesetzt: period range
+    if ($dateFrom === '' && $dateTo === '') {
+        [$df, $dt] = period_to_range($period ?: 'month');
+        $dateFrom = $df;
+        $dateTo = $dt;
     }
-    
-    $type = $_GET['type'] ?? 'all';
-    $data = [];
-    
-    switch ($type) {
+
+    switch ($action) {
         case 'overview':
-            // Basic counts
-            $data['patients'] = $db->query("SELECT COUNT(*) FROM tp_patients")->fetchColumn();
-            $data['owners'] = $db->query("SELECT COUNT(*) FROM tp_owners")->fetchColumn();
-            $data['appointments'] = $db->query("SELECT COUNT(*) FROM tp_appointments")->fetchColumn();
-            $data['treatments'] = $db->query("SELECT COUNT(*) FROM tp_treatments")->fetchColumn();
-            $data['invoices'] = $db->query("SELECT COUNT(*) FROM tp_invoices")->fetchColumn();
-            $data['notes'] = $db->query("SELECT COUNT(*) FROM tp_notes")->fetchColumn();
-            $data['users'] = $db->query("SELECT COUNT(*) FROM tp_users")->fetchColumn();
-            $data['active_users'] = $db->query("SELECT COUNT(*) FROM tp_users WHERE is_active = 1")->fetchColumn();
-            
-            // Revenue calculation
-            $revenue = $db->query("
-                SELECT COALESCE(SUM(total_amount), 0) as revenue 
-                FROM tp_invoices 
-                WHERE status = 'paid'
-            ")->fetchColumn();
-            $data['revenue'] = number_format($revenue, 2, '.', '');
-            
-            break;
-            
-        case 'treatments':
-            // Treatments last 7 days
-            $stmt = $db->query("
-                SELECT DATE(created_at) as date, COUNT(*) as count 
-                FROM tp_treatments 
-                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            ");
-            $data['daily'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Treatment types distribution
-            $stmt = $db->query("
-                SELECT treatment_type, COUNT(*) as count 
-                FROM tp_treatments 
-                GROUP BY treatment_type
-                ORDER BY count DESC
-                LIMIT 5
-            ");
-            $data['types'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            break;
-            
-        case 'users':
-            // User list with details
-            $stmt = $db->query("
-                SELECT 
-                    u.*,
-                    (SELECT MAX(created_at) FROM tp_activity_log WHERE user_id = u.id AND action = 'login') as last_login
-                FROM tp_users u
-                ORDER BY u.last_name, u.first_name
-            ");
-            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Remove sensitive data
-            foreach ($users as &$user) {
-                unset($user['password_hash']);
-                unset($user['remember_token']);
-                $user['is_active'] = (bool) $user['is_active'];
-            }
-            
-            $data = $users;
-            break;
-            
-        case 'activity':
-            // Recent activity log
-            $stmt = $db->query("
-                SELECT 
-                    a.*,
-                    CONCAT(u.first_name, ' ', u.last_name) as user_name
-                FROM tp_activity_log a
-                LEFT JOIN tp_users u ON a.user_id = u.id
-                ORDER BY a.created_at DESC
-                LIMIT 50
-            ");
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            break;
-            
-        case 'database':
-            // Database table information
-            $tables = [];
-            $stmt = $db->query("SHOW TABLE STATUS WHERE Name LIKE 'tp_%'");
-            $tableInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            foreach ($tableInfo as $table) {
-                $tables[] = [
-                    'name' => $table['Name'],
-                    'rows' => $table['Rows'],
-                    'size' => $this->formatBytes($table['Data_length'] + $table['Index_length']),
-                    'engine' => $table['Engine']
-                ];
-            }
-            
-            $data = $tables;
-            break;
-            
-        case 'charts':
-            // Chart data for admin dashboard
-            
-            // Treatments over last 7 days
-            $stmt = $db->query("
-                SELECT 
-                    DATE(created_at) as date,
-                    COUNT(*) as count
-                FROM tp_treatments
-                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            ");
-            $treatmentData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Fill in missing dates
-            $treatments = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $date = date('Y-m-d', strtotime("-$i days"));
-                $found = false;
-                foreach ($treatmentData as $td) {
-                    if ($td['date'] === $date) {
-                        $treatments[] = [
-                            'date' => $date,
-                            'label' => date('d.m', strtotime($date)),
-                            'count' => (int) $td['count']
-                        ];
-                        $found = true;
-                        break;
-                    }
-                }
-                if (!$found) {
-                    $treatments[] = [
-                        'date' => $date,
-                        'label' => date('d.m', strtotime($date)),
-                        'count' => 0
-                    ];
-                }
-            }
-            
-            // Treatment types distribution
-            $stmt = $db->query("
-                SELECT 
-                    COALESCE(treatment_type, 'Andere') as type,
-                    COUNT(*) as count
-                FROM tp_treatments
-                GROUP BY treatment_type
-                ORDER BY count DESC
-                LIMIT 5
-            ");
-            $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $data = [
-                'treatments' => $treatments,
-                'types' => $types
-            ];
-            break;
-            
-        case 'all':
-        default:
-            // Combined data
-            $data = [
-                'overview' => $this->getOverviewStats($db),
-                'charts' => $this->getChartData($db),
-                'activity' => $this->getRecentActivity($db),
-                'database' => $this->getDatabaseInfo($db)
-            ];
-            break;
-    }
-    
-    echo json_encode([
-        'status' => 'success',
-        'data' => $data
-    ]);
-    
-} catch (Exception $e) {
-    error_log('Stats API Error: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Serverfehler: ' . $e->getMessage()
-    ]);
-}
+        default: {
+            $row = compute_overview($pdo, $dateFrom, $dateTo);
 
-// Helper functions
-function formatBytes($bytes, $precision = 2) {
-    $units = ['B', 'KB', 'MB', 'GB'];
-    $bytes = max($bytes, 0);
-    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-    $pow = min($pow, count($units) - 1);
-    $bytes /= pow(1024, $pow);
-    return round($bytes, $precision) . ' ' . $units[$pow];
-}
-
-function getOverviewStats($db) {
-    return [
-        'patients' => $db->query("SELECT COUNT(*) FROM tp_patients")->fetchColumn(),
-        'appointments' => $db->query("SELECT COUNT(*) FROM tp_appointments")->fetchColumn(),
-        'treatments' => $db->query("SELECT COUNT(*) FROM tp_treatments")->fetchColumn(),
-        'users' => $db->query("SELECT COUNT(*) FROM tp_users")->fetchColumn(),
-        'active_users' => $db->query("SELECT COUNT(*) FROM tp_users WHERE is_active = 1")->fetchColumn(),
-        'revenue' => number_format($db->query("
-            SELECT COALESCE(SUM(total_amount), 0) 
-            FROM tp_invoices 
-            WHERE status = 'paid'
-        ")->fetchColumn(), 2, '.', '')
-    ];
-}
-
-function getChartData($db) {
-    // Treatments over last 7 days
-    $stmt = $db->query("
-        SELECT 
-            DATE(created_at) as date,
-            COUNT(*) as count
-        FROM tp_treatments
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-    ");
-    $treatmentData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Fill in missing dates
-    $treatments = [];
-    for ($i = 6; $i >= 0; $i--) {
-        $date = date('Y-m-d', strtotime("-$i days"));
-        $found = false;
-        foreach ($treatmentData as $td) {
-            if ($td['date'] === $date) {
-                $treatments[] = [
-                    'date' => $date,
-                    'label' => date('d.m', strtotime($date)),
-                    'count' => (int) $td['count']
-                ];
-                $found = true;
-                break;
-            }
-        }
-        if (!$found) {
-            $treatments[] = [
-                'date' => $date,
-                'label' => date('d.m', strtotime($date)),
-                'count' => 0
-            ];
+            api_success([
+                'items' => [$row],
+                'count' => 1,
+            ]);
+            break;
         }
     }
-    
-    // Treatment types
-    $stmt = $db->query("
-        SELECT 
-            COALESCE(treatment_type, 'Andere') as type,
-            COUNT(*) as count
-        FROM tp_treatments
-        GROUP BY treatment_type
-        ORDER BY count DESC
-        LIMIT 5
-    ");
-    $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    return [
-        'treatments' => $treatments,
-        'types' => $types
-    ];
+
+} catch (PDOException $e) {
+    error_log("Stats API PDO Error (" . (string)$action . "): " . $e->getMessage());
+    api_error('Datenbankfehler aufgetreten');
+} catch (Throwable $e) {
+    error_log("Stats API Error (" . (string)$action . "): " . $e->getMessage());
+    api_error('Serverfehler aufgetreten');
 }
 
-function getRecentActivity($db) {
-    $stmt = $db->query("
-        SELECT 
-            a.*,
-            CONCAT(u.first_name, ' ', u.last_name) as user_name
-        FROM tp_activity_log a
-        LEFT JOIN tp_users u ON a.user_id = u.id
-        ORDER BY a.created_at DESC
-        LIMIT 20
-    ");
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-function getDatabaseInfo($db) {
-    $tables = [];
-    $stmt = $db->query("SHOW TABLE STATUS WHERE Name LIKE 'tp_%'");
-    $tableInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    foreach ($tableInfo as $table) {
-        $tables[] = [
-            'name' => $table['Name'],
-            'rows' => $table['Rows'],
-            'size' => formatBytes($table['Data_length'] + $table['Index_length'])
-        ];
-    }
-    
-    return $tables;
-}
+exit;

@@ -1,216 +1,281 @@
 <?php
 /**
- * Settings API
- * CRUD operations for application settings
+ * /api/settings.php
+ * Settings API (JSON) - categories + list + save + add + delete
  */
 
-require_once __DIR__ . '/_bootstrap.php';
+declare(strict_types=1);
 
-// Set JSON headers
 header('Content-Type: application/json; charset=UTF-8');
 
-// Get request method
-$method = $_SERVER['REQUEST_METHOD'];
+$autoloadCandidates = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../../vendor/autoload.php',
+];
+
+$autoloadPath = null;
+foreach ($autoloadCandidates as $p) {
+    if (is_file($p)) { $autoloadPath = $p; break; }
+}
+
+if (!$autoloadPath) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Autoload nicht gefunden']);
+    exit;
+}
+
+require_once $autoloadPath;
+
+use TierphysioManager\Auth;
+use TierphysioManager\Database;
 
 try {
-    // Admin-only endpoint
-    if (!$auth->isAdmin()) {
-        http_response_code(403);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Admin-Rechte erforderlich'
-        ]);
+    $auth = Auth::getInstance();
+    $dbWrap = Database::getInstance();
+
+    // Login + Permission
+    $auth->requireLogin();
+    $auth->requirePermission('manage_settings');
+
+    $pdo = method_exists($dbWrap, 'getConnection') ? $dbWrap->getConnection() : null;
+    if (!$pdo instanceof PDO) {
+        throw new RuntimeException('PDO Verbindung fehlt.');
+    }
+
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    $action = $_GET['action'] ?? ($_POST['action'] ?? 'categories');
+    $showSystem = (int)($_GET['show_system'] ?? 0);
+
+    $jsonBody = null;
+    if ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
+        $raw = file_get_contents('php://input');
+        $jsonBody = $raw ? json_decode($raw, true) : null;
+    }
+
+    // helper: allow only short types (wegen deinem type-truncation Problem)
+    $normalizeType = function($t): string {
+        $t = strtolower(trim((string)$t));
+        // nur kurze Werte erlauben
+        $allowed = ['string','text','int','bool','json','email','url','pass'];
+        if (!in_array($t, $allowed, true)) return 'string';
+        return $t;
+    };
+
+    $ok = function(array $data = [], string $message = 'OK') {
+        echo json_encode(['status' => 'success', 'message' => $message, 'data' => $data], JSON_UNESCAPED_UNICODE);
         exit;
-    }
-    
-    switch ($method) {
-        case 'GET':
-            // Get settings by category or all
-            $category = $_GET['category'] ?? null;
-            
-            if ($category) {
-                $stmt = $db->prepare("SELECT * FROM tp_settings WHERE category = ? ORDER BY `key`");
-                $stmt->execute([$category]);
-            } else {
-                $stmt = $db->query("SELECT * FROM tp_settings ORDER BY category, `key`");
-            }
-            
-            $settings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Transform settings to key-value pairs if requested
-            if (isset($_GET['format']) && $_GET['format'] === 'object') {
-                $result = [];
-                foreach ($settings as $setting) {
-                    $key = $setting['category'] . '.' . $setting['key'];
-                    $result[$key] = [
-                        'value' => $setting['value'],
-                        'type' => $setting['type'],
-                        'description' => $setting['description'],
-                        'is_system' => (bool) $setting['is_system']
-                    ];
-                }
-                $settings = $result;
-            }
-            
-            echo json_encode([
-                'status' => 'success',
-                'data' => $settings
-            ]);
-            break;
-            
-        case 'POST':
-        case 'PUT':
-            // Update settings
-            $input = json_decode(file_get_contents('php://input'), true);
-            
-            if (!$input || !isset($input['settings'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Keine Einstellungen zum Speichern'
-                ]);
-                exit;
-            }
-            
-            // Begin transaction
-            $db->beginTransaction();
-            
-            try {
-                $updatedCount = 0;
-                
-                foreach ($input['settings'] as $setting) {
-                    if (!isset($setting['category'], $setting['key'], $setting['value'])) {
-                        continue;
-                    }
-                    
-                    // Check if setting exists
-                    $stmt = $db->prepare("SELECT id, is_system FROM tp_settings WHERE category = ? AND `key` = ?");
-                    $stmt->execute([$setting['category'], $setting['key']]);
-                    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($existing) {
-                        // Don't update system settings
-                        if ($existing['is_system']) {
-                            continue;
-                        }
-                        
-                        // Update existing setting
-                        $stmt = $db->prepare("
-                            UPDATE tp_settings 
-                            SET value = ?, 
-                                type = ?,
-                                description = ?,
-                                updated_by = ?,
-                                updated_at = NOW()
-                            WHERE id = ?
-                        ");
-                        $stmt->execute([
-                            $setting['value'],
-                            $setting['type'] ?? 'string',
-                            $setting['description'] ?? null,
-                            $user['id'],
-                            $existing['id']
-                        ]);
-                    } else {
-                        // Insert new setting
-                        $stmt = $db->prepare("
-                            INSERT INTO tp_settings (category, `key`, value, type, description, updated_by, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, NOW())
-                        ");
-                        $stmt->execute([
-                            $setting['category'],
-                            $setting['key'],
-                            $setting['value'],
-                            $setting['type'] ?? 'string',
-                            $setting['description'] ?? null,
-                            $user['id']
-                        ]);
-                    }
-                    
-                    $updatedCount++;
-                }
-                
-                $db->commit();
-                
-                // Log activity
-                $stmt = $db->prepare("
-                    INSERT INTO tp_activity_log (user_id, action, entity_type, ip_address, created_at)
-                    VALUES (?, 'update', 'settings', ?, NOW())
+    };
+
+    $fail = function(string $message, int $code = 400) {
+        http_response_code($code);
+        echo json_encode(['status' => 'error', 'message' => $message], JSON_UNESCAPED_UNICODE);
+        exit;
+    };
+
+    // ===== GET =====
+    if ($method === 'GET') {
+        if ($action === 'categories') {
+            if ($showSystem === 1) {
+                $stmt = $pdo->query("
+                    SELECT category, COUNT(*) AS count
+                    FROM tp_settings
+                    GROUP BY category
+                    ORDER BY category
                 ");
-                $stmt->execute([$user['id'], $_SERVER['REMOTE_ADDR'] ?? '']);
-                
-                echo json_encode([
-                    'status' => 'success',
-                    'message' => "$updatedCount Einstellungen aktualisiert",
-                    'data' => ['updated' => $updatedCount]
-                ]);
-                
-            } catch (Exception $e) {
-                $db->rollBack();
-                throw $e;
+            } else {
+                $stmt = $pdo->query("
+                    SELECT category, COUNT(*) AS count
+                    FROM tp_settings
+                    WHERE COALESCE(is_system,0) = 0
+                    GROUP BY category
+                    ORDER BY category
+                ");
             }
-            break;
-            
-        case 'DELETE':
-            // Delete a setting (non-system only)
-            $input = json_decode(file_get_contents('php://input'), true);
-            
-            if (!isset($input['category'], $input['key'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Kategorie und Schlüssel erforderlich'
-                ]);
-                exit;
+
+            $cats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $ok(['categories' => $cats], 'Kategorien geladen');
+        }
+
+        if ($action === 'list') {
+            $category = $_GET['category'] ?? 'general';
+
+            if ($showSystem === 1) {
+                $stmt = $pdo->prepare("
+                    SELECT id, category, `key`, value, type, description, COALESCE(is_system,0) AS is_system
+                    FROM tp_settings
+                    WHERE category = :c
+                    ORDER BY `key`
+                ");
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT id, category, `key`, value, type, description, COALESCE(is_system,0) AS is_system
+                    FROM tp_settings
+                    WHERE category = :c AND COALESCE(is_system,0) = 0
+                    ORDER BY `key`
+                ");
             }
-            
-            // Check if it's a system setting
-            $stmt = $db->prepare("SELECT id, is_system FROM tp_settings WHERE category = ? AND `key` = ?");
-            $stmt->execute([$input['category'], $input['key']]);
-            $setting = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$setting) {
-                http_response_code(404);
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Einstellung nicht gefunden'
-                ]);
-                exit;
-            }
-            
-            if ($setting['is_system']) {
-                http_response_code(403);
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'System-Einstellungen können nicht gelöscht werden'
-                ]);
-                exit;
-            }
-            
-            // Delete the setting
-            $stmt = $db->prepare("DELETE FROM tp_settings WHERE id = ?");
-            $stmt->execute([$setting['id']]);
-            
-            echo json_encode([
-                'status' => 'success',
-                'message' => 'Einstellung gelöscht'
-            ]);
-            break;
-            
-        default:
-            http_response_code(405);
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Methode nicht erlaubt'
-            ]);
-            break;
+
+            $stmt->execute([':c' => $category]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $ok(['settings' => $rows], 'Settings geladen');
+        }
+
+        $fail('Unbekannte GET action', 400);
     }
-    
-} catch (Exception $e) {
+
+    // ===== POST =====
+    if ($method === 'POST') {
+        // SAVE
+        if ($action === 'save') {
+            $payload = $jsonBody ?? [];
+            $category = (string)($payload['category'] ?? '');
+            $items = $payload['settings'] ?? [];
+
+            if ($category === '') $fail('Kategorie fehlt', 400);
+            if (!is_array($items)) $fail('settings muss Array sein', 400);
+
+            $pdo->beginTransaction();
+            $updated = 0;
+
+            foreach ($items as $it) {
+                $key = (string)($it['key'] ?? '');
+                if ($key === '') continue;
+
+                $value = $it['value'] ?? '';
+                if (is_array($value)) {
+                    $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+                } else {
+                    $value = (string)$value;
+                }
+
+                $type = $normalizeType($it['type'] ?? 'string');
+                $desc = isset($it['description']) ? (string)$it['description'] : null;
+
+                // exists?
+                $stmt = $pdo->prepare("SELECT id, COALESCE(is_system,0) AS is_system FROM tp_settings WHERE category = :c AND `key` = :k LIMIT 1");
+                $stmt->execute([':c' => $category, ':k' => $key]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($row) {
+                    // system only editable when show_system=1
+                    if ((int)$row['is_system'] === 1 && $showSystem !== 1) continue;
+
+                    $u = $pdo->prepare("
+                        UPDATE tp_settings
+                        SET value = :v,
+                            type = :t,
+                            description = :d,
+                            updated_by = :uid,
+                            updated_at = NOW()
+                        WHERE id = :id
+                    ");
+                    $u->execute([
+                        ':v' => $value,
+                        ':t' => $type,
+                        ':d' => $desc,
+                        ':uid' => method_exists($auth, 'getUserId') ? $auth->getUserId() : null,
+                        ':id' => (int)$row['id'],
+                    ]);
+                } else {
+                    $i = $pdo->prepare("
+                        INSERT INTO tp_settings (category, `key`, value, type, description, is_system, updated_by, created_at, updated_at)
+                        VALUES (:c, :k, :v, :t, :d, 0, :uid, NOW(), NOW())
+                    ");
+                    $i->execute([
+                        ':c' => $category,
+                        ':k' => $key,
+                        ':v' => $value,
+                        ':t' => $type,
+                        ':d' => $desc,
+                        ':uid' => method_exists($auth, 'getUserId') ? $auth->getUserId() : null,
+                    ]);
+                }
+
+                $updated++;
+            }
+
+            $pdo->commit();
+            $ok(['updated' => $updated], $updated . ' Einstellungen gespeichert');
+        }
+
+        // ADD single
+        if ($action === 'add') {
+            $payload = $jsonBody ?? [];
+            $category = trim((string)($payload['category'] ?? ''));
+            $key = trim((string)($payload['key'] ?? ''));
+            $value = $payload['value'] ?? '';
+            $type = $normalizeType($payload['type'] ?? 'string');
+            $desc = isset($payload['description']) ? (string)$payload['description'] : null;
+
+            if ($category === '' || $key === '') $fail('category/key fehlt', 400);
+
+            if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+            else $value = (string)$value;
+
+            $stmt = $pdo->prepare("SELECT id FROM tp_settings WHERE category = :c AND `key` = :k LIMIT 1");
+            $stmt->execute([':c' => $category, ':k' => $key]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($row) {
+                $u = $pdo->prepare("
+                    UPDATE tp_settings
+                    SET value = :v, type = :t, description = :d, updated_by = :uid, updated_at = NOW()
+                    WHERE id = :id
+                ");
+                $u->execute([
+                    ':v' => $value,
+                    ':t' => $type,
+                    ':d' => $desc,
+                    ':uid' => method_exists($auth, 'getUserId') ? $auth->getUserId() : null,
+                    ':id' => (int)$row['id'],
+                ]);
+            } else {
+                $i = $pdo->prepare("
+                    INSERT INTO tp_settings (category, `key`, value, type, description, is_system, updated_by, created_at, updated_at)
+                    VALUES (:c, :k, :v, :t, :d, 0, :uid, NOW(), NOW())
+                ");
+                $i->execute([
+                    ':c' => $category,
+                    ':k' => $key,
+                    ':v' => $value,
+                    ':t' => $type,
+                    ':d' => $desc,
+                    ':uid' => method_exists($auth, 'getUserId') ? $auth->getUserId() : null,
+                ]);
+            }
+
+            $ok([], 'Einstellung gespeichert');
+        }
+
+        // DELETE
+        if ($action === 'delete') {
+            $payload = $jsonBody ?? [];
+            $category = trim((string)($payload['category'] ?? ''));
+            $key = trim((string)($payload['key'] ?? ''));
+
+            if ($category === '' || $key === '') $fail('category/key fehlt', 400);
+
+            $stmt = $pdo->prepare("SELECT id, COALESCE(is_system,0) AS is_system FROM tp_settings WHERE category = :c AND `key` = :k LIMIT 1");
+            $stmt->execute([':c' => $category, ':k' => $key]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) $fail('Nicht gefunden', 404);
+            if ((int)$row['is_system'] === 1) $fail('System Setting kann nicht gelöscht werden', 403);
+
+            $d = $pdo->prepare("DELETE FROM tp_settings WHERE id = :id");
+            $d->execute([':id' => (int)$row['id']]);
+
+            $ok([], 'Einstellung gelöscht');
+        }
+
+        $fail('Unbekannte POST action', 400);
+    }
+
+    $fail('Methode nicht erlaubt', 405);
+
+} catch (Throwable $e) {
     error_log('Settings API Error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Serverfehler: ' . $e->getMessage()
-    ]);
+    echo json_encode(['status' => 'error', 'message' => 'Serverfehler: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
