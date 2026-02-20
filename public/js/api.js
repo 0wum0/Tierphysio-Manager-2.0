@@ -314,7 +314,31 @@ class PatientManager {
     }
 
     async viewPatient(id) {
-        window.location.href = `/public/patients.php?action=view&id=${id}`;
+        // New UI: open patient in modal (Alpine) instead of navigating away.
+        // Fallback: if no modal component is present, navigate to the legacy view URL.
+        const numericId = Number(id);
+
+        // Fire an event that the Alpine modal listens to.
+        try {
+            window.dispatchEvent(new CustomEvent('open-patient-modal', { detail: { id: numericId } }));
+        } catch (e) {
+            // ignore
+        }
+
+        // If the modal exists, keep the user on the list URL (remove ?action=view&id=...).
+        const hasModal = !!document.querySelector('[x-data^="patientModal"], [x-data*="patientModal("]');
+        if (hasModal) {
+            try {
+                const cleanUrl = window.location.pathname; // keep current path, drop query
+                window.history.replaceState({}, '', cleanUrl);
+            } catch (e) {
+                // ignore
+            }
+            return;
+        }
+
+        // Legacy fallback (old view page)
+        window.location.href = `/public/patients.php?action=view&id=${numericId}`;
     }
 
     async editPatient(id) {
