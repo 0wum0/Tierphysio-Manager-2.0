@@ -80,25 +80,6 @@ function render_template($path, $data = []) {
             return '/' . ltrim($path, '/');
         }));
         
-
-        $twig->addFunction(new \Twig\TwigFunction('currency', function($value, $currency = 'EUR') {
-            $amount = is_numeric($value) ? (float)$value : 0.0;
-            $symbol = ($currency === 'CHF') ? 'CHF' : '€';
-            return number_format($amount, 2, ',', '.') . ' ' . $symbol;
-        }));
-
-        $twig->addFilter(new \Twig\TwigFilter('time_format', function($value) {
-            $time = trim((string)$value);
-            if ($time === '') return '—';
-
-            if (preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $time)) {
-                return substr($time, 0, 5);
-            }
-
-            $ts = strtotime($time);
-            if ($ts === false) return $time;
-            return date('H:i', $ts);
-        }));
         $twig->addFunction(new \Twig\TwigFunction('route', function($name, $params = []) {
             // Simple route function for compatibility
             $routes = [
