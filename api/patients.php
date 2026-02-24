@@ -1,287 +1,414 @@
 <?php
+// Datei: patients.php
+
 declare(strict_types=1);
 
-require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../includes/bootstrap.php'; // ggf. anpassen, falls dein Pfad anders ist
 
-if (isset($auth) && is_object($auth)) {
-    if (method_exists($auth, 'requireLogin')) {
-        $auth->requireLogin();
+// ======================================================
+// Helpers
+// ======================================================
+
+function api_success($data = [], int $code = 200): void {
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => true,
+        'status' => 'success',
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function api_error(string $message, int $code = 400, $extra = null): void {
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    $payload = [
+        'ok' => false,
+        'status' => 'error',
+        'message' => $message
+    ];
+    if ($extra !== null) $payload['extra'] = $extra;
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Liest JSON-Body (mit Cache, damit Mehrfachaufrufe nicht "leer" sind)
+ */
+function read_json_body(): array {
+    static $cache = null;
+
+    if (is_array($cache)) return $cache;
+
+    $raw = file_get_contents('php://input');
+    if (!$raw) {
+        $cache = [];
+        return $cache;
     }
-    if (method_exists($auth, 'requirePermission')) {
-        $auth->requirePermission('view_patients');
+
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        $cache = [];
+        return $cache;
+    }
+
+    $cache = $data;
+    return $cache;
+}
+
+function safe_entity_type(string $type): string {
+    $type = trim(strtolower($type));
+    if ($type === 'record') return 'record';
+    if ($type === 'note') return 'note';
+    if ($type === 'treatment') return 'treatment';
+    // Default
+    return 'note';
+}
+
+function is_json_request(): bool {
+    $ct = (string)($_SERVER['CONTENT_TYPE'] ?? '');
+    return (stripos($ct, 'application/json') !== false);
+}
+
+function ensure_auth(): void {
+    // Hier ggf. deine Auth-Logik/Session-Checks
+    if (!isset($_SESSION['user_id'])) {
+        api_error('Nicht eingeloggt', 401);
     }
 }
 
-/** @var PDO $db */
-$pdo = $db;
-$driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-$isSqlite = ($driver === 'sqlite');
-$nowExpr = $isSqlite ? "datetime('now')" : 'NOW()';
+// ======================================================
+// Init
+// ======================================================
+
+ensure_auth();
 
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-$input = json_decode((string)file_get_contents('php://input'), true);
-if (!is_array($input)) $input = [];
+$action = (string)($_GET['action'] ?? ($_POST['action'] ?? ''));
 
-$action = (string)($_GET['action'] ?? ($_POST['action'] ?? ($input['action'] ?? '')));
+// JSON-POST: action kann auch im Body stehen
+if ($action === '' && is_json_request()) {
+    $data = read_json_body();
+    $action = (string)($data['action'] ?? '');
+}
+
 $action = trim($action);
-
-$aliases = [
-    'list' => 'list_patients',
-    'get' => 'get_patient',
-    'create' => 'create_patient',
-    'update' => 'update_patient',
-    'delete' => 'delete_patient',
-    'upload_image' => 'upload_patient_image',
-    'delete_image' => 'delete_patient_image',
-];
-$action = $aliases[$action] ?? $action;
-
-function request_data(array $json): array {
-    if (!empty($_POST)) return $_POST;
-    return $json;
-}
-
-function normalize_upload_path(string $rel): string {
-    return '/' . ltrim(str_replace('\\', '/', $rel), '/');
-}
-
-function save_uploaded_file(string $inputName, string $subDir): ?array {
-    if (empty($_FILES[$inputName]) || !is_array($_FILES[$inputName])) return null;
-    $f = $_FILES[$inputName];
-    if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return null;
-
-    $root = dirname(__DIR__);
-    $targetDir = $root . '/uploads/' . trim($subDir, '/');
-    if (!is_dir($targetDir)) @mkdir($targetDir, 0775, true);
-
-    $original = (string)($f['name'] ?? 'file');
-    $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-    $safeExt = preg_match('/^[a-z0-9]{1,8}$/', $ext) ? $ext : 'bin';
-    $name = uniqid('p_', true) . '.' . $safeExt;
-    $target = $targetDir . '/' . $name;
-
-    if (!@move_uploaded_file((string)$f['tmp_name'], $target)) {
-        return null;
-    }
-
-    return [
-        'file_name' => $original,
-        'file_path' => 'uploads/' . trim($subDir, '/') . '/' . $name,
-        'file_size' => (int)($f['size'] ?? 0),
-        'mime_type' => (string)($f['type'] ?? 'application/octet-stream'),
-    ];
-}
-
-function patient_timeline(PDO $pdo, int $patientId): array {
-    $items = [];
-
-    $n = $pdo->prepare("SELECT id, type, title, content, created_at, updated_at FROM tp_notes WHERE patient_id = ? ORDER BY created_at DESC");
-    $n->execute([$patientId]);
-    foreach (($n->fetchAll(PDO::FETCH_ASSOC) ?: []) as $row) {
-        $kind = (($row['type'] ?? 'note') === 'medical') ? 'record' : 'note';
-        $items[] = [
-            'id' => (int)$row['id'],
-            'entity_type' => $kind,
-            'title' => (string)($row['title'] ?? ''),
-            'content' => (string)($row['content'] ?? ''),
-            'entry_date' => (string)($row['created_at'] ?? ''),
-            'created_at' => (string)($row['created_at'] ?? ''),
-            'updated_at' => (string)($row['updated_at'] ?? ''),
-        ];
-    }
-
-    $t = $pdo->prepare("SELECT id, treatment_date, treatment_type, description, notes, created_at, updated_at FROM tp_treatments WHERE patient_id = ? ORDER BY treatment_date DESC, created_at DESC");
-    $t->execute([$patientId]);
-    foreach (($t->fetchAll(PDO::FETCH_ASSOC) ?: []) as $row) {
-        $items[] = [
-            'id' => (int)$row['id'],
-            'entity_type' => 'treatment',
-            'title' => (string)($row['treatment_type'] ?? 'Behandlung'),
-            'content' => trim((string)($row['description'] ?? '') . "\n" . (string)($row['notes'] ?? '')),
-            'entry_date' => (string)($row['treatment_date'] ?? $row['created_at'] ?? ''),
-            'created_at' => (string)($row['created_at'] ?? ''),
-            'updated_at' => (string)($row['updated_at'] ?? ''),
-        ];
-    }
-
-    usort($items, static function ($a, $b) {
-        return strcmp((string)($b['entry_date'] ?? ''), (string)($a['entry_date'] ?? ''));
-    });
-
-    return $items;
-}
-
 if ($action === '') {
     api_error('Keine Aktion angegeben', 400);
 }
 
-try {
-    switch ($action) {
-        case 'list_patients':
-        case 'get_patients': {
-            $q = trim((string)($_GET['q'] ?? ''));
-            $species = trim((string)($_GET['species'] ?? ''));
+// DB
+/** @var PDO $pdo */
+$pdo = $GLOBALS['pdo'] ?? null;
+if (!$pdo instanceof PDO) {
+    api_error('DB nicht verfügbar', 500);
+}
+
+// SQLite Flag (falls du das nutzt)
+$isSqlite = (bool)($GLOBALS['isSqlite'] ?? false);
+
+// ======================================================
+// Router
+// ======================================================
+
+switch ($action) {
+
+    // ======================================================
+    // PATIENTS: LIST
+    // ======================================================
+    case 'list_patients': {
+        try {
+            $q = (string)($_GET['q'] ?? '');
+            $species = (string)($_GET['species'] ?? '');
+            $q = trim($q);
+            $species = trim($species);
 
             $where = [];
             $params = [];
+
             if ($q !== '') {
-                $where[] = '(p.name LIKE ? OR p.microchip LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ?)';
+                $where[] = "(p.name LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR p.microchip LIKE ?)";
                 $like = '%' . $q . '%';
-                $params = [$like, $like, $like, $like];
+                $params[] = $like;
+                $params[] = $like;
+                $params[] = $like;
+                $params[] = $like;
             }
+
             if ($species !== '') {
-                $where[] = 'p.species = ?';
+                $where[] = "p.species = ?";
                 $params[] = $species;
             }
 
-            $ownerExpr = $isSqlite
-                ? "TRIM(COALESCE(o.first_name,'') || ' ' || COALESCE(o.last_name,''))"
-                : "TRIM(CONCAT(COALESCE(o.first_name,''), ' ', COALESCE(o.last_name,'')))";
+            $sql = "
+                SELECT
+                    p.*,
+                    CONCAT(COALESCE(o.first_name,''),' ',COALESCE(o.last_name,'')) AS owner_full_name
+                FROM tp_patients p
+                LEFT JOIN tp_owners o ON o.id = p.owner_id
+            ";
 
-            $sql = "SELECT p.*, {$ownerExpr} AS owner_full_name FROM tp_patients p LEFT JOIN tp_owners o ON o.id = p.owner_id";
-            if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-            $sql .= ' ORDER BY p.created_at DESC';
+            if ($where) {
+                $sql .= " WHERE " . implode(" AND ", $where);
+            }
 
-            $st = $pdo->prepare($sql);
-            $st->execute($params);
-            $items = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            api_success(['items' => $items, 'count' => count($items)]);
+            $sql .= " ORDER BY p.created_at DESC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            api_success([
+                'items' => $items,
+                'count' => count($items),
+            ]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Laden der Patienten', 500);
         }
+    } break;
 
-        case 'get_patient': {
-            $id = (int)($_GET['id'] ?? $input['id'] ?? 0);
+    // ======================================================
+    // PATIENTS: GET SINGLE
+    // ======================================================
+    case 'get_patient': {
+        try {
+            $id = (int)($_GET['id'] ?? 0);
             if ($id <= 0) api_error('Ungültige ID', 400);
 
-            $ownerExpr = $isSqlite
-                ? "TRIM(COALESCE(o.first_name,'') || ' ' || COALESCE(o.last_name,''))"
-                : "TRIM(CONCAT(COALESCE(o.first_name,''), ' ', COALESCE(o.last_name,'')))";
-
-            $st = $pdo->prepare("SELECT p.*, {$ownerExpr} AS owner_full_name, o.salutation AS owner_salutation, o.first_name AS owner_first_name, o.last_name AS owner_last_name, o.phone AS owner_phone, o.mobile AS owner_mobile, o.email AS owner_email, o.street AS owner_street, o.house_number AS owner_house_number, o.postal_code AS owner_postal_code, o.city AS owner_city FROM tp_patients p LEFT JOIN tp_owners o ON o.id = p.owner_id WHERE p.id = ? LIMIT 1");
-            $st->execute([$id]);
-            $row = $st->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare("
+                SELECT
+                    p.*,
+                    o.salutation AS owner_salutation,
+                    o.first_name AS owner_first_name,
+                    o.last_name AS owner_last_name,
+                    CONCAT(COALESCE(o.first_name,''),' ',COALESCE(o.last_name,'')) AS owner_full_name,
+                    o.phone AS owner_phone,
+                    o.mobile AS owner_mobile,
+                    o.email AS owner_email,
+                    o.street AS owner_street,
+                    o.house_number AS owner_house_number,
+                    o.postal_code AS owner_postal_code,
+                    o.city AS owner_city
+                FROM tp_patients p
+                LEFT JOIN tp_owners o ON o.id = p.owner_id
+                WHERE p.id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) api_error('Patient nicht gefunden', 404);
-            api_success(['patient' => $row, 'items' => [$row], 'count' => 1]);
-        }
 
-        case 'create_patient': {
-            $data = request_data($input);
+            api_success(['patient' => $row]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Laden des Patienten', 500);
+        }
+    } break;
+
+    // ======================================================
+    // PATIENTS: CREATE (inkl. optionalem Profilbild-Upload)
+    // ======================================================
+    case 'create_patient': {
+        try {
+            $isJson = is_json_request();
+            $data = $isJson ? read_json_body() : $_POST;
+
             $name = trim((string)($data['name'] ?? ''));
             $species = trim((string)($data['species'] ?? ''));
+            $breed = trim((string)($data['breed'] ?? ''));
+            $birth_date = trim((string)($data['birth_date'] ?? ''));
+            $gender = trim((string)($data['gender'] ?? 'unknown'));
+            $weight = (string)($data['weight'] ?? '');
+            $microchip = trim((string)($data['microchip'] ?? ''));
+            $color = trim((string)($data['color'] ?? ''));
+            $notes = trim((string)($data['notes'] ?? ''));
+            $health_status = trim((string)($data['health_status'] ?? 'ok'));
+
+            $owner_id = (int)($data['owner_id'] ?? 0);
+
             if ($name === '' || $species === '') api_error('Name und Tierart sind erforderlich', 400);
 
-            $st = $pdo->prepare("INSERT INTO tp_patients (owner_id, name, species, breed, birth_date, gender, weight, microchip, color, notes, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, {$nowExpr}, {$nowExpr})");
-            $st->execute([
-                (int)($data['owner_id'] ?? 0) ?: null,
-                $name,
-                $species,
-                trim((string)($data['breed'] ?? '')),
-                trim((string)($data['birth_date'] ?? '')) ?: null,
-                trim((string)($data['gender'] ?? 'unknown')),
-                ((string)($data['weight'] ?? '') !== '') ? $data['weight'] : null,
-                trim((string)($data['microchip'] ?? '')),
-                trim((string)($data['color'] ?? '')),
-                trim((string)($data['notes'] ?? '')),
-            ]);
+            // Optional: Besitzer im Body als newOwner anlegen
+            if ($owner_id <= 0 && isset($data['owner']) && is_array($data['owner'])) {
+                $o = $data['owner'];
 
-            $id = (int)$pdo->lastInsertId();
-            $upload = save_uploaded_file('patient_image', 'patients');
-            if ($upload) {
-                $u = $pdo->prepare("UPDATE tp_patients SET image = ?, updated_at = {$nowExpr} WHERE id = ?");
-                $u->execute([normalize_upload_path($upload['file_path']), $id]);
+                $salutation = trim((string)($o['salutation'] ?? ''));
+                $first_name = trim((string)($o['first_name'] ?? ''));
+                $last_name = trim((string)($o['last_name'] ?? ''));
+                $phone = trim((string)($o['phone'] ?? ''));
+                $mobile = trim((string)($o['mobile'] ?? ''));
+                $email = trim((string)($o['email'] ?? ''));
+                $street = trim((string)($o['street'] ?? ''));
+                $house_number = trim((string)($o['house_number'] ?? ''));
+                $postal_code = trim((string)($o['postal_code'] ?? ''));
+                $city = trim((string)($o['city'] ?? ''));
+
+                if ($first_name === '' || $last_name === '') api_error('Besitzer Vor- und Nachname sind erforderlich', 400);
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO tp_owners
+                    (salutation, first_name, last_name, phone, mobile, email, street, house_number, postal_code, city, created_at)
+                    VALUES
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([
+                    $salutation, $first_name, $last_name, $phone, $mobile, $email,
+                    $street, $house_number, $postal_code, $city
+                ]);
+                $owner_id = (int)$pdo->lastInsertId();
             }
 
-            api_success(['id' => $id, 'patient_id' => $id, 'image_url' => $upload ? normalize_upload_path($upload['file_path']) : null]);
-        }
+            $stmt = $pdo->prepare("
+                INSERT INTO tp_patients
+                (owner_id, name, species, breed, birth_date, gender, weight, microchip, color, notes, health_status, is_active, created_at, updated_at)
+                VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
+            ");
+            $stmt->execute([
+                $owner_id > 0 ? $owner_id : null,
+                $name, $species, $breed,
+                $birth_date !== '' ? $birth_date : null,
+                $gender,
+                ($weight !== '' ? $weight : null),
+                $microchip,
+                $color,
+                $notes,
+                ($health_status !== '' ? $health_status : 'ok'),
+            ]);
 
-        case 'update_patient': {
-            $data = request_data($input);
-            $id = (int)($data['id'] ?? $_GET['id'] ?? 0);
+            $patient_id = (int)$pdo->lastInsertId();
+
+            // Optional: Profilbild direkt mit hochladen (patient_image)
+            $imageResult = handle_patient_image_upload($pdo, $patient_id, $isSqlite);
+
+            api_success([
+                'id' => $patient_id,
+                'image' => $imageResult['image'] ?? null,
+                'image_url' => $imageResult['image_url'] ?? null,
+            ], 201);
+
+        } catch (Exception $e) {
+            api_error('Fehler beim Anlegen des Patienten', 500);
+        }
+    } break;
+
+    // ======================================================
+    // PATIENTS: UPDATE (inkl. optionalem Profilbild-Upload)
+    // ======================================================
+    case 'update_patient': {
+        try {
+            $isJson = is_json_request();
+            $data = $isJson ? read_json_body() : $_POST;
+
+            $id = (int)($data['id'] ?? ($_GET['id'] ?? 0));
             if ($id <= 0) api_error('Ungültige ID', 400);
 
             $name = trim((string)($data['name'] ?? ''));
             $species = trim((string)($data['species'] ?? ''));
+            $breed = trim((string)($data['breed'] ?? ''));
+            $birth_date = trim((string)($data['birth_date'] ?? ''));
+            $gender = trim((string)($data['gender'] ?? 'unknown'));
+            $weight = (string)($data['weight'] ?? '');
+            $microchip = trim((string)($data['microchip'] ?? ''));
+            $color = trim((string)($data['color'] ?? ''));
+            $notes = trim((string)($data['notes'] ?? ''));
+            $health_status = trim((string)($data['health_status'] ?? 'ok'));
+            $owner_id = (int)($data['owner_id'] ?? 0);
+
             if ($name === '' || $species === '') api_error('Name und Tierart sind erforderlich', 400);
 
-            $st = $pdo->prepare("UPDATE tp_patients SET owner_id = ?, name = ?, species = ?, breed = ?, birth_date = ?, gender = ?, weight = ?, microchip = ?, color = ?, notes = ?, updated_at = {$nowExpr} WHERE id = ?");
-            $st->execute([
-                (int)($data['owner_id'] ?? 0) ?: null,
+            $stmt = $pdo->prepare("
+                UPDATE tp_patients
+                SET owner_id = ?, name = ?, species = ?, breed = ?, birth_date = ?, gender = ?, weight = ?,
+                    microchip = ?, color = ?, notes = ?, health_status = ?, updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $owner_id > 0 ? $owner_id : null,
                 $name,
                 $species,
-                trim((string)($data['breed'] ?? '')),
-                trim((string)($data['birth_date'] ?? '')) ?: null,
-                trim((string)($data['gender'] ?? 'unknown')),
-                ((string)($data['weight'] ?? '') !== '') ? $data['weight'] : null,
-                trim((string)($data['microchip'] ?? '')),
-                trim((string)($data['color'] ?? '')),
-                trim((string)($data['notes'] ?? '')),
-                $id,
+                $breed,
+                ($birth_date !== '' ? $birth_date : null),
+                $gender,
+                ($weight !== '' ? $weight : null),
+                $microchip,
+                $color,
+                $notes,
+                ($health_status !== '' ? $health_status : 'ok'),
+                $id
             ]);
 
-            $upload = save_uploaded_file('patient_image', 'patients');
-            if ($upload) {
-                $u = $pdo->prepare("UPDATE tp_patients SET image = ?, updated_at = {$nowExpr} WHERE id = ?");
-                $u->execute([normalize_upload_path($upload['file_path']), $id]);
-            }
+            // Optionales Profilbild (patient_image)
+            $imageResult = handle_patient_image_upload($pdo, $id, $isSqlite);
 
-            api_success(['id' => $id, 'patient_id' => $id, 'image_url' => $upload ? normalize_upload_path($upload['file_path']) : null]);
+            api_success([
+                'id' => $id,
+                'image' => $imageResult['image'] ?? null,
+                'image_url' => $imageResult['image_url'] ?? null,
+            ]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Speichern', 500);
         }
+    } break;
 
-        case 'delete_patient': {
-            $data = request_data($input);
-            $id = (int)($data['id'] ?? $_GET['id'] ?? 0);
+    // ======================================================
+    // PATIENTS: DELETE
+    // ======================================================
+    case 'delete_patient': {
+        try {
+            $isJson = is_json_request();
+            $data = $isJson ? read_json_body() : $_POST;
+            $id = (int)($data['id'] ?? ($_GET['id'] ?? 0));
             if ($id <= 0) api_error('Ungültige ID', 400);
-            $st = $pdo->prepare('DELETE FROM tp_patients WHERE id = ?');
-            $st->execute([$id]);
+
+            $stmt = $pdo->prepare("DELETE FROM tp_patients WHERE id = ?");
+            $stmt->execute([$id]);
+
             api_success(['id' => $id]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Löschen', 500);
         }
+    } break;
 
-        case 'list_owners': {
-            $st = $pdo->query('SELECT * FROM tp_owners ORDER BY last_name, first_name');
-            $items = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    // ======================================================
+    // OWNERS: LIST
+    // ======================================================
+    case 'list_owners': {
+        try {
+            $stmt = $pdo->query("SELECT * FROM tp_owners ORDER BY last_name ASC, first_name ASC");
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             api_success(['items' => $items, 'count' => count($items)]);
+        } catch (Exception $e) {
+            api_error('Fehler beim Laden der Besitzer', 500);
         }
+    } break;
 
-        case 'upload_patient_image': {
-            $data = request_data($input);
-            $patientId = (int)($data['patient_id'] ?? $data['id'] ?? $_GET['patient_id'] ?? 0);
-            if ($patientId <= 0) api_error('Patient ID ist erforderlich', 400);
-            $upload = save_uploaded_file('patient_image', 'patients') ?? save_uploaded_file('file', 'patients') ?? save_uploaded_file('image', 'patients');
-            if (!$upload) api_error('Kein Bild hochgeladen', 400);
-            $path = normalize_upload_path($upload['file_path']);
-            $u = $pdo->prepare("UPDATE tp_patients SET image = ?, updated_at = {$nowExpr} WHERE id = ?");
-            $u->execute([$path, $patientId]);
-            api_success(['image_url' => $path, 'image' => $path, 'patient_id' => $patientId]);
+    // ======================================================
+    // TIMELINE: GET
+    // ======================================================
+    case 'get_timeline': {
+        try {
+            $isJson = is_json_request();
+            $data = $isJson ? read_json_body() : $_GET;
+
+            $patient_id = (int)($data['patient_id'] ?? 0);
+            if ($patient_id <= 0) api_error('Patient ID ist erforderlich', 400);
+
+            // ... (Timeline-Logik bleibt wie bei dir)
+            // (Hier kommt im Teil 2+ der restliche Code)
+
+            // Platzhalter (wird im nächsten Teil fortgesetzt)
+            // api_success([...]);
+
+        } catch (Exception $e) {
+            api_error('Fehler beim Laden der Timeline', 500);
         }
+    } break;
 
-        case 'delete_patient_image': {
-            $data = request_data($input);
-            $patientId = (int)($data['patient_id'] ?? $data['id'] ?? 0);
-            if ($patientId <= 0) api_error('Patient ID ist erforderlich', 400);
-            $u = $pdo->prepare("UPDATE tp_patients SET image = NULL, updated_at = {$nowExpr} WHERE id = ?");
-            $u->execute([$patientId]);
-            api_success(['patient_id' => $patientId]);
-        }
+    // ======================================================
+    // (REST KOMMT IN TEIL 2)
+    // ======================================================
 
-        case 'get_timeline': {
-            $patientId = (int)($_GET['patient_id'] ?? $input['patient_id'] ?? 0);
-            if ($patientId <= 0) api_error('Patient ID ist erforderlich', 400);
-            $items = patient_timeline($pdo, $patientId);
-            api_success(['items' => $items, 'count' => count($items)]);
-        }
-
-        case 'create_entry':
-        case 'update_entry':
-        case 'delete_entry':
-        case 'upload_entry_files':
-        case 'get_entry_files':
-        case 'delete_entry_file': {
-            // Graceful compatibility for advanced timeline features not yet persisted.
-            api_success(['items' => [], 'count' => 0]);
-        }
-
-        default:
-            api_error('Unbekannte Aktion: ' . $action, 400);
-    }
-} catch (Throwable $e) {
-    api_error('Patienten-API Fehler: ' . $e->getMessage(), 500);
+    default:
+        api_error('Unbekannte Aktion: ' . $action, 400);
 }
