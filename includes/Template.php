@@ -4,7 +4,10 @@ declare(strict_types=1);
 namespace TierphysioManager;
 
 /**
- * Template service expected by public controllers.
+ * Application Template service used by public/*.php pages.
+ *
+ * Uses the existing standalone Twig renderer in includes/template.php,
+ * which already requires ../vendor/autoload.php.
  */
 class Template {
     private static ?self $instance = null;
@@ -19,17 +22,19 @@ class Template {
     }
 
     public function display(string $template, array $data = []): void {
+        // Ensure templates that depend on a global user (e.g. base layout)
+        // still receive user context even if only user_id is stored in session.
         if (!array_key_exists('user', $data)) {
             try {
                 $auth = Auth::getInstance();
                 if (method_exists($auth, 'getUser')) {
-                    $user = $auth->getUser();
-                    if (is_array($user) || is_object($user)) {
-                        $data['user'] = $user;
+                    $u = $auth->getUser();
+                    if (is_array($u) || is_object($u)) {
+                        $data['user'] = $u;
                     }
                 }
             } catch (\Throwable $e) {
-                // continue rendering without explicit user
+                // keep rendering without forcing user context
             }
         }
 
