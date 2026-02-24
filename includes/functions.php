@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Tierphysio Manager 2.0
  * Helper Functions
@@ -45,36 +45,40 @@ function generatePatientNumber($pdo) {
 /**
  * API Success Response
  */
-function api_success($data = null, $message = 'Success') {
-    header('Content-Type: application/json; charset=utf-8');
-    
-    // Merge data if it's an array, otherwise wrap in data key
-    if (is_array($data)) {
-        $response = array_merge(['status' => 'success'], $data);
-    } else {
-        $response = [
-            'status' => 'success',
-            'message' => $message,
-            'data' => $data
-        ];
+if (!function_exists('api_success')) {
+    function api_success($data = null, $message = 'Success') {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        // Merge data if it's an array, otherwise wrap in data key
+        if (is_array($data)) {
+            $response = array_merge(['status' => 'success'], $data);
+        } else {
+            $response = [
+                'status' => 'success',
+                'message' => $message,
+                'data' => $data
+            ];
+        }
+        
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
     }
-    
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    exit;
 }
 
 /**
  * API Error Response
  */
-function api_error($message = 'Error', $code = 400) {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code($code);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $message,
-        'data' => null
-    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    exit;
+if (!function_exists('api_error')) {
+    function api_error($message = 'Error', $code = 400) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code($code);
+        echo json_encode([
+            'status' => 'error',
+            'message' => $message,
+            'data' => null
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
 }
 
 /**

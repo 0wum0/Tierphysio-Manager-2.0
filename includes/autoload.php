@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 if (defined('TP_AUTOLOAD_READY')) {
@@ -28,8 +28,11 @@ spl_autoload_register(static function (string $class): void {
 
     $relative = substr($class, strlen($prefix));
     $relative = str_replace('\\', '/', $relative);
+
+    // Explicit map for case-sensitive disambiguation on Linux/Mac servers
     $map = [
-        'Template' => __DIR__ . '/TemplateClass.php',
+        'Template' => __DIR__ . '/Template.php',
+        'Auth'     => __DIR__ . '/Auth.php',
     ];
 
     if (isset($map[$relative]) && is_file($map[$relative])) {
